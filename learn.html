@@ -269,23 +269,30 @@
 
   /* 체온계 */
   .thermo-wrap {
-    display: flex; gap: 36px;
-    align-items: center; justify-content: center;
-    padding: 30px 20px 50px;
+    display: flex; gap: 32px;
+    align-items: stretch;
+    justify-content: center;
+    padding: 30px 20px 30px;
   }
-  .thermo-svg { flex-shrink: 0; }
-  .thermo-info { flex: 1; min-width: 0; max-width: 320px; }
+  .thermo-svg { flex-shrink: 0; align-self: center; }
+  .thermo-info {
+    flex: 1; min-width: 0; max-width: 280px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 24px 0 8px;
+  }
+  .thermo-text { display: flex; flex-direction: column; gap: 6px; }
   .thermo-emoji-big {
-    font-size: 96px; line-height: 1;
-    margin-bottom: 8px;
+    font-size: 84px; line-height: 1;
     filter: drop-shadow(3px 3px 0 var(--bg-deep));
     transition: transform 0.3s;
+    align-self: center;
   }
   .thermo-state {
     font-family: 'Bricolage Grotesque', sans-serif;
     font-weight: 800;
-    font-size: 28px;
-    margin-bottom: 6px;
+    font-size: 30px;
     letter-spacing: -0.02em;
   }
   .thermo-msg {
@@ -293,15 +300,17 @@
     font-weight: 600;
     font-size: 22px;
     color: var(--ink-soft);
-    line-height: 1.3;
+    line-height: 1.4;
+    margin: 0;
   }
 
   @media (max-width: 720px) {
     .wrap { padding: 16px 14px 60px; }
     .lesson { padding: 22px 18px; }
     .lesson h2 { font-size: 24px; }
-    .thermo-wrap { flex-direction: column; gap: 16px; padding: 16px; }
-    .thermo-info { text-align: center; }
+    .thermo-wrap { flex-direction: column; gap: 18px; padding: 16px; align-items: center; }
+    .thermo-info { text-align: center; padding: 0; align-items: center; gap: 14px; max-width: 100%; }
+    .thermo-text { align-items: center; }
     .progress .dot { width: 28px; }
   }
 
@@ -377,6 +386,241 @@
     transition: all 0.15s;
   }
   .reset-btn:hover { border-color: var(--ink); color: var(--ink); }
+
+  /* 페이지 내 네비 */
+  .in-nav {
+    display: flex; gap: 8px; justify-content: center;
+    flex-wrap: wrap; margin-top: 16px;
+  }
+  .in-nav a {
+    background: var(--card);
+    border: 2px solid var(--ink);
+    color: var(--ink);
+    padding: 5px 14px;
+    border-radius: 999px;
+    text-decoration: none;
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700; font-size: 12px;
+    transition: all 0.15s ease;
+  }
+  .in-nav a:hover {
+    background: var(--ink); color: var(--bg-deep);
+    transform: translateY(-2px);
+  }
+
+  /* 섹션 마커 */
+  .section-marker {
+    margin: 56px 0 24px;
+    display: flex; align-items: center; gap: 16px;
+  }
+  .section-marker::before, .section-marker::after {
+    content: ""; flex: 1; height: 0;
+    border-top: 2px dashed var(--ink);
+  }
+  .section-marker .label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--ink-soft);
+    letter-spacing: 0.2em;
+    white-space: nowrap;
+  }
+
+  /* 섹션 헤더 */
+  .section-head {
+    text-align: center;
+    margin-bottom: 32px;
+  }
+  .section-head h2 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 800;
+    font-size: clamp(34px, 5vw, 50px);
+    line-height: 1;
+    letter-spacing: -0.04em;
+    margin-bottom: 12px;
+  }
+  .section-head h2 .accent {
+    background: var(--ink); color: var(--bg-deep);
+    padding: 0 14px; border-radius: 8px;
+    display: inline-block;
+    transform: rotate(-1deg);
+  }
+  .section-head .desc {
+    font-size: 16px;
+    color: var(--ink-soft);
+    max-width: 480px;
+    margin: 0 auto;
+    line-height: 1.55;
+  }
+
+  /* 실전 케이스 카드 */
+  .case {
+    background: var(--card);
+    border: 2.5px solid var(--ink);
+    border-radius: 24px;
+    padding: 26px 28px;
+    margin-bottom: 24px;
+    box-shadow: 6px 6px 0 var(--ink);
+  }
+  .case-head {
+    display: flex; gap: 10px; align-items: center;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+  }
+  .case-head .flag { font-size: 22px; }
+  .case-head .name {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 800; font-size: 22px;
+    letter-spacing: -0.02em;
+  }
+  .case-head .ticker {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--ink-soft);
+    background: var(--bg-deep);
+    padding: 3px 10px;
+    border-radius: 999px;
+  }
+  .case-head .tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700; font-size: 13px;
+    padding: 4px 12px;
+    border-radius: 999px;
+    border: 2px solid var(--ink);
+  }
+  .case-head .tag.up { background: var(--good-soft); color: var(--good); }
+  .case-head .tag.down { background: var(--bad-soft); color: var(--bad); }
+  .case-head .tag.flat { background: var(--bg-deep); color: var(--ink-soft); }
+  .case-head .period {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--ink-faded);
+    margin-left: auto;
+  }
+  .case-board {
+    background: var(--bg);
+    border: 2px dashed var(--ink-faded);
+    border-radius: 12px;
+    padding: 12px 14px;
+    margin-bottom: 16px;
+  }
+  .case-board svg { width: 100%; display: block; }
+  .case-text { font-size: 14.5px; color: var(--ink); line-height: 1.65; }
+  .case-text p { margin-bottom: 10px; }
+  .case-text p strong {
+    background: var(--bg-deep);
+    padding: 1px 6px;
+    border-radius: 4px;
+  }
+  .case-text .lesson-tag {
+    margin-top: 14px;
+    background: var(--ink); color: var(--bg-deep);
+    padding: 12px 16px;
+    border-radius: 12px;
+    font-size: 14px;
+    line-height: 1.55;
+  }
+  .case-text .lesson-tag strong { color: white; }
+  .case-text .related {
+    display: inline-block;
+    margin-top: 12px;
+    font-family: 'Caveat', cursive;
+    font-weight: 600;
+    font-size: 18px;
+    color: var(--ink);
+    text-decoration: underline;
+    text-decoration-color: var(--bad);
+    text-decoration-style: wavy;
+    text-underline-offset: 4px;
+    transition: color 0.15s ease;
+  }
+  .case-text .related:hover { color: var(--bad); }
+
+  /* 전설들 */
+  .legends-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+    gap: 20px;
+  }
+  .legend {
+    background: var(--card);
+    border: 2.5px solid var(--ink);
+    border-radius: 20px;
+    padding: 22px;
+    box-shadow: 5px 5px 0 var(--ink);
+    display: grid;
+    grid-template-columns: 72px 1fr;
+    gap: 16px;
+    align-items: start;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+  .legend:hover {
+    transform: translate(-2px, -2px);
+    box-shadow: 7px 7px 0 var(--ink);
+  }
+  .legend-mono {
+    width: 72px; height: 72px;
+    border: 2.5px solid var(--ink);
+    border-radius: 12px;
+    background: var(--bg-deep);
+    flex-shrink: 0;
+    transform: rotate(-3deg);
+    box-shadow: 3px 3px 0 var(--ink);
+    overflow: hidden;
+    box-sizing: border-box;
+  }
+  .legend-mono svg { width: 100%; height: 100%; display: block; }
+  .legend-name {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 800;
+    font-size: 18px;
+    letter-spacing: -0.02em;
+    line-height: 1.15;
+  }
+  .legend-en {
+    font-size: 12px;
+    color: var(--ink-soft);
+    margin-top: 2px;
+  }
+  .legend-meta {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--ink-faded);
+    margin: 6px 0 8px;
+    letter-spacing: 0.05em;
+  }
+  .legend-nick {
+    font-family: 'Caveat', cursive;
+    font-weight: 700;
+    font-size: 21px;
+    color: var(--bad);
+    display: inline-block;
+    margin-bottom: 10px;
+  }
+  .legend-story {
+    font-size: 13.5px;
+    color: var(--ink-soft);
+    line-height: 1.6;
+    margin-bottom: 12px;
+  }
+  .legend-story strong { color: var(--ink); }
+  .legend-story em { font-style: italic; color: var(--ink); }
+  .legend-modern {
+    background: var(--bg-deep);
+    border-left: 4px solid var(--ink);
+    padding: 10px 12px;
+    font-size: 13px;
+    border-radius: 6px;
+    line-height: 1.55;
+  }
+  .legend-modern strong { color: var(--bad); }
+
+  @media (max-width: 720px) {
+    .legend { grid-template-columns: 56px 1fr; gap: 12px; padding: 18px; }
+    .legend-mono { width: 56px; height: 56px; font-size: 20px; }
+    .case { padding: 18px 16px; }
+    .case-head .name { font-size: 18px; }
+  }
+
 </style>
 </head>
 <body>
@@ -399,6 +643,11 @@
       <span class="dot" data-i="3"></span>
       <span class="dot" data-i="4"></span>
       <span class="dot" data-i="5"></span>
+    </div>
+    <div class="in-nav">
+      <a href="#L1">📝 6 레슨</a>
+      <a href="#section-cases">📚 실전 차트</a>
+      <a href="#section-legends">🎭 전설들</a>
     </div>
   </div>
 
@@ -509,9 +758,11 @@
       <div class="thermo-wrap">
         <svg class="thermo-svg" id="thermo" viewBox="0 0 100 280" width="100" height="280"></svg>
         <div class="thermo-info">
+          <div class="thermo-text">
+            <div class="thermo-state" id="thermo-state">정상 (50)</div>
+            <p class="thermo-msg" id="thermo-msg">과열도 침체도 아닌 평온 상태</p>
+          </div>
           <div class="thermo-emoji-big" id="thermo-emoji">😊</div>
-          <div class="thermo-state" id="thermo-state">정상 (50)</div>
-          <p class="thermo-msg" id="thermo-msg">과열도 침체도 아닌 평온 상태</p>
         </div>
       </div>
       <div class="slider-row">
@@ -528,6 +779,22 @@
       <div class="callout">💡 진료소에선 — 'RSI 14일' 활력 징후가 자동으로 체온 측정</div>
     </div>
   </div>
+
+  <!-- ============ SECTION 02: 실전 차트 ============ -->
+  <div class="section-marker"><span class="label">SECTION 02</span></div>
+  <div class="section-head" id="section-cases">
+    <h2>📚 진짜 <span class="accent">차트</span>로 보기</h2>
+    <p class="desc">이론은 끝. 실제 차트에서 어떻게 보이는지 봐요.<br/>유명한 종목들의 결정적 순간들.</p>
+  </div>
+  <div id="cases-container"></div>
+
+  <!-- ============ SECTION 03: 전설들 ============ -->
+  <div class="section-marker"><span class="label">SECTION 03</span></div>
+  <div class="section-head" id="section-legends">
+    <h2>🎭 차트의 <span class="accent">전설들</span></h2>
+    <p class="desc">이 모든 걸 만든 사람들. 알고 보면 다 흥미로운 이야기.</p>
+  </div>
+  <div class="legends-grid" id="legends-container"></div>
 
   <!-- ============ FINAL ============ -->
   <div class="final-card" id="final">
@@ -885,6 +1152,311 @@ setupTrace({
     }
   });
   render();
+})();
+
+/* ==================== Section 02: 실전 차트 ==================== */
+function smaCalc(arr, period) {
+  return arr.map((_, i) => {
+    if (i + 1 < period) return null;
+    const slice = arr.slice(i + 1 - period, i + 1);
+    return slice.reduce((s, x) => s + x, 0) / period;
+  });
+}
+
+const cases = [
+  {
+    id: 'nvda', flag: '🇺🇸', name: '엔비디아', ticker: 'NVDA',
+    period: '2023', tag: '+240%', tagClass: 'up',
+    bars: [140, 145, 148, 152, 158, 165, 172, 168, 162, 170, 180, 195, 210, 225, 240, 230, 220, 245, 270, 290, 280, 270, 290, 320, 350, 380, 410, 445, 470, 480],
+    showMA: true, maPeriod: 8,
+    markers: [
+      { bar: 8, price: 162, color: '#2d8659' },
+      { bar: 16, price: 220, color: '#2d8659' }
+    ],
+    bigLabel: { text: '+240%', color: 'good' },
+    story: `<p>2023년 AI 붐. 엔비디아는 1년 동안 <strong>240% 올랐어요</strong>. 핵심은 가파르지만 50일선(주황 점선)을 한 번도 안 깬 것.</p><p>추세가 흔들릴 때마다 (초록 점) 정확히 50일선에서 반등했죠. 이게 <strong>건강한 상승 추세</strong>의 모범 답안.</p>`,
+    lesson: '강한 추세에선 매번 단기 평균선이 매수 자리. 추세를 거스르지 마세요.',
+    relatedLesson: { id: 'L5', text: '이동평균선 레슨' }
+  },
+  {
+    id: 'tsla', flag: '🇺🇸', name: '테슬라', ticker: 'TSLA',
+    period: '2020', tag: '+700% (위험!)', tagClass: 'flat',
+    bars: [30, 32, 28, 30, 35, 38, 42, 45, 50, 55, 58, 65, 70, 75, 82, 90, 100, 115, 130, 150, 165, 185, 210, 235, 230, 250, 270, 260, 240, 220],
+    showMA: true, maPeriod: 8,
+    markers: [
+      { bar: 26, price: 270, color: '#d94626' },
+      { bar: 29, price: 220, color: '#d94626' }
+    ],
+    bigLabel: { text: '+700%', color: 'warn' },
+    story: `<p>2020년 테슬라는 1년 만에 <strong>700% 올랐어요</strong>. 어디 가나 "테슬라!" 외치던 시기.</p><p>차트는 분명 위로 갔지만, 끝부분이 너무 가팔라요. 이런 <strong>포물선형 상승</strong>은 그 자체가 위험 신호. 한 번 식기 시작하면 빠르게 식어요.</p>`,
+    lesson: '너무 빠른 상승은 차트가 "조심해" 외치는 거. 신규 진입자에겐 매우 비싼 자리.',
+    relatedLesson: { id: 'L1', text: '추세선 레슨' }
+  },
+  {
+    id: 'kakao', flag: '🇰🇷', name: '카카오', ticker: '035720.KS',
+    period: '2021—2022', tag: '-69%', tagClass: 'down',
+    bars: [130, 145, 155, 165, 168, 165, 158, 153, 148, 142, 138, 132, 125, 118, 112, 105, 98, 92, 88, 82, 78, 72, 68, 65, 62, 65, 60, 55, 52, 50],
+    showMA: true, maPeriod: 8,
+    markers: [
+      { bar: 4, price: 168, color: '#d94626' },
+      { bar: 11, price: 132, color: '#d94626' }
+    ],
+    bigLabel: { text: '-69%', color: 'bad' },
+    story: `<p>2021년 6월 17만원 찍었던 카카오. 1년 반 만에 5만원까지 떨어졌어요. <strong>-69%</strong>.</p><p>꼭대기(첫 번째 빨간 점) 이후 처음 50일선 깰 때(두 번째 빨간 점)가 결정적이었어요. 그 다음부터 매번 50일선이 <strong>저항선으로 변신</strong>. 한 번 깨진 지지선은 저항선이 된다는 격언 그대로.</p>`,
+    lesson: '추세 무너지면 펀더멘털 자신 있어도 일단 기다리세요. "떨어지는 칼은 잡지 마" 격언이 그래서 있어요.',
+    relatedLesson: { id: 'L4', text: '저항선 레슨' }
+  },
+  {
+    id: 'samsung', flag: '🇰🇷', name: '삼성전자', ticker: '005930.KS',
+    period: '2022—2024', tag: '박스권', tagClass: 'flat',
+    bars: [78, 75, 70, 65, 62, 60, 64, 70, 75, 78, 76, 72, 68, 62, 60, 65, 70, 75, 78, 80, 76, 70, 65, 62, 60, 64, 70, 76, 78, 75],
+    showMA: false,
+    markers: [
+      { bar: 5, price: 60, color: '#2d8659' },
+      { bar: 14, price: 60, color: '#2d8659' },
+      { bar: 24, price: 60, color: '#2d8659' },
+      { bar: 9, price: 78, color: '#d94626' },
+      { bar: 19, price: 80, color: '#d94626' },
+      { bar: 28, price: 78, color: '#d94626' }
+    ],
+    bigLabel: { text: '60K↔80K', color: 'warn' },
+    story: `<p>삼성전자는 거의 2년 동안 <strong>6만원~8만원 박스권</strong>에 갇혔어요.</p><p>6만원에 닿으면 (초록 점 — 3번이나!) 사람들이 사고, 8만원에 닿으면 (빨간 점) 팔고. <strong>지지/저항이 교과서처럼 작동하는</strong> 박스권 매매의 정석.</p>`,
+    lesson: '박스권에선 추세 추종이 아니라 박스 매매가 어울려요. 박스 깰 때까지 기다리는 것도 전략.',
+    relatedLesson: { id: 'L3', text: '지지선 레슨' }
+  },
+  {
+    id: 'meta', flag: '🇺🇸', name: '메타', ticker: 'META',
+    period: '2022', tag: '-73%', tagClass: 'down',
+    bars: [330, 325, 318, 305, 295, 280, 270, 255, 240, 225, 210, 195, 180, 165, 152, 145, 135, 128, 120, 110, 105, 100, 92, 88, 90, 95, 105, 115, 122, 120],
+    showMA: true, maPeriod: 8,
+    markers: [
+      { bar: 9, price: 225, color: '#d94626' },
+      { bar: 23, price: 88, color: '#2d8659' }
+    ],
+    bigLabel: { text: '-73%', color: 'bad' },
+    story: `<p>2022년 메타는 330달러에서 88달러까지 떨어졌어요. <strong>-73%</strong>.</p><p>"이렇게 좋은 회사가 왜?" 했지만 차트는 분명 "조심해" 외치고 있었어요. <strong>장기 평균선(주황) 깨짐</strong>이 결정적 신호. 펀더멘털만 보면 못 보는 위험을 차트는 보여줘요.</p>`,
+    lesson: '큰 우량주도 200일선 깨면 위험. 펀더멘털 + 차트, 두 눈으로 보세요.',
+    relatedLesson: { id: 'L5', text: '이동평균선 레슨' }
+  }
+];
+
+function renderCase(c) {
+  const ctx = buildChart(c.bars, 600, 240, '#1d2230');
+  let html = ctx.areaPath;
+
+  if (c.showMA) {
+    const ma = smaCalc(c.bars, c.maPeriod || 8);
+    const maPts = ma.map((v, i) => v == null ? null : `${ctx.xOf(i).toFixed(1)},${ctx.yOf(v).toFixed(1)}`).filter(Boolean).join(' ');
+    if (maPts) {
+      html += `<polyline points="${maPts}" fill="none" stroke="#d9881a" stroke-width="2" stroke-dasharray="5 4" stroke-linejoin="round"/>`;
+    }
+  }
+
+  html += ctx.chartLine.replace('stroke-width="2.2"', 'stroke-width="2.6"');
+
+  c.markers?.forEach(m => {
+    html += `<circle cx="${ctx.xOf(m.bar).toFixed(1)}" cy="${ctx.yOf(m.price).toFixed(1)}" r="7" fill="${m.color}" stroke="white" stroke-width="3"/>`;
+  });
+
+  if (c.bigLabel) {
+    const color = c.bigLabel.color === 'good' ? '#2d8659'
+      : c.bigLabel.color === 'bad' ? '#d94626' : '#d9881a';
+    html += `<text x="565" y="42" text-anchor="end" font-family="Bricolage Grotesque" font-weight="800" font-size="24" fill="${color}">${c.bigLabel.text}</text>`;
+  }
+
+  return html;
+}
+
+(function buildCasesSection() {
+  const container = document.getElementById('cases-container');
+  container.innerHTML = cases.map(c => `
+    <div class="case" id="case-${c.id}">
+      <div class="case-head">
+        <span class="flag">${c.flag}</span>
+        <span class="name">${c.name}</span>
+        <span class="ticker">${c.ticker}</span>
+        <span class="tag ${c.tagClass}">${c.tag}</span>
+        <span class="period">${c.period}</span>
+      </div>
+      <div class="case-board">
+        <svg id="svg-case-${c.id}" viewBox="0 0 600 240"></svg>
+      </div>
+      <div class="case-text">
+        ${c.story}
+        <div class="lesson-tag">💡 <strong>교훈:</strong> ${c.lesson}</div>
+        <a href="#${c.relatedLesson.id}" class="related">↗ ${c.relatedLesson.text}로 가서 직접 그어보기</a>
+      </div>
+    </div>
+  `).join('');
+
+  cases.forEach(c => {
+    const svg = document.getElementById(`svg-case-${c.id}`);
+    if (svg) svg.innerHTML = renderCase(c);
+  });
+})();
+
+/* ==================== Section 03: 전설들 ==================== */
+const faces = {
+  // CD - Charles Dow: bushy beard journalist
+  'CD': `<svg viewBox="0 0 72 72" xmlns="http://www.w3.org/2000/svg">
+    <title>Charles Dow</title>
+    <path d="M 19 30 C 19 17, 27 13, 36 13 C 45 13, 53 17, 53 30 C 50 25, 44 23, 36 23 C 28 23, 22 25, 19 30 Z" fill="#3a3025"/>
+    <circle cx="36" cy="40" r="17" fill="#F4C9A8"/>
+    <ellipse cx="36" cy="52" rx="17" ry="13" fill="#5a4a35"/>
+    <path d="M 26 41 Q 30 39 36 41 Q 42 39 46 41 Q 43 44 36 43 Q 29 44 26 41 Z" fill="#3a3025"/>
+    <circle cx="29" cy="36" r="1.7" fill="#1d2230"/>
+    <circle cx="43" cy="36" r="1.7" fill="#1d2230"/>
+    <circle cx="29.5" cy="35.5" r="0.5" fill="white"/>
+    <circle cx="43.5" cy="35.5" r="0.5" fill="white"/>
+    <circle cx="22" cy="43" r="2.5" fill="#f4a890" opacity="0.5"/>
+    <circle cx="50" cy="43" r="2.5" fill="#f4a890" opacity="0.5"/>
+  </svg>`,
+
+  // JL - Jesse Livermore: slick blonde, bow tie, sly eyes
+  'JL': `<svg viewBox="0 0 72 72" xmlns="http://www.w3.org/2000/svg">
+    <title>Jesse Livermore</title>
+    <path d="M 19 28 C 19 14, 28 12, 36 12 C 44 12, 53 14, 53 28 L 51 30 C 49 24, 42 22, 36 22 C 30 22, 23 24, 21 30 Z" fill="#D4A04A"/>
+    <path d="M 24 23 L 31 21 M 27 19 L 35 17 M 33 16 L 41 16 M 38 17 L 45 19" stroke="#A87830" stroke-width="0.9" fill="none" stroke-linecap="round"/>
+    <circle cx="36" cy="40" r="16" fill="#FAD0AB"/>
+    <path d="M 26 36 Q 30 34.5 33 36" stroke="#1d2230" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+    <path d="M 39 36 Q 42 34.5 46 36" stroke="#1d2230" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+    <path d="M 31 47 Q 36 50 41 47" stroke="#1d2230" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+    <circle cx="24" cy="44" r="2.5" fill="#f4a890" opacity="0.5"/>
+    <circle cx="48" cy="44" r="2.5" fill="#f4a890" opacity="0.5"/>
+    <path d="M 28 62 L 34 58 L 36 62 L 34 66 Z" fill="#d94626"/>
+    <path d="M 44 62 L 38 58 L 36 62 L 38 66 Z" fill="#d94626"/>
+    <rect x="34.5" y="60" width="3" height="4" fill="#a93516"/>
+  </svg>`,
+
+  // RW - Richard Wyckoff: round glasses, big mustache observer
+  'RW': `<svg viewBox="0 0 72 72" xmlns="http://www.w3.org/2000/svg">
+    <title>Richard Wyckoff</title>
+    <path d="M 19 26 C 22 18, 28 16, 32 19 L 32 26 C 26 26, 22 27, 19 30 Z" fill="#5a4a35"/>
+    <path d="M 53 26 C 50 18, 44 16, 40 19 L 40 26 C 46 26, 50 27, 53 30 Z" fill="#5a4a35"/>
+    <circle cx="36" cy="40" r="17" fill="#F4C9A8"/>
+    <circle cx="28" cy="36" r="5.5" fill="#fff" fill-opacity="0.3" stroke="#1d2230" stroke-width="1.8"/>
+    <circle cx="44" cy="36" r="5.5" fill="#fff" fill-opacity="0.3" stroke="#1d2230" stroke-width="1.8"/>
+    <line x1="33.5" y1="36" x2="38.5" y2="36" stroke="#1d2230" stroke-width="1.8"/>
+    <circle cx="28" cy="36" r="1.5" fill="#1d2230"/>
+    <circle cx="44" cy="36" r="1.5" fill="#1d2230"/>
+    <path d="M 22 44 Q 25 42 30 44 Q 33 42 36 44 Q 39 42 42 44 Q 47 42 50 44 Q 47 48 42 47 Q 38 47 36 47 Q 34 47 30 47 Q 25 48 22 44 Z" fill="#5a4a35"/>
+    <path d="M 33 51 Q 36 52.5 39 51" stroke="#1d2230" stroke-width="1" fill="none" stroke-linecap="round"/>
+    <circle cx="22" cy="44" r="2" fill="#f4a890" opacity="0.4"/>
+    <circle cx="50" cy="44" r="2" fill="#f4a890" opacity="0.4"/>
+  </svg>`,
+
+  // WW - Welles Wilder: square glasses engineer
+  'WW': `<svg viewBox="0 0 72 72" xmlns="http://www.w3.org/2000/svg">
+    <title>Welles Wilder</title>
+    <path d="M 20 28 C 20 16, 30 14, 36 14 C 42 14, 52 16, 52 28 C 48 22, 42 22, 36 22 C 32 22, 24 22, 20 28 Z" fill="#7a5a3a"/>
+    <path d="M 32 17 Q 33 22 33 27" stroke="#5a4525" stroke-width="0.9" fill="none" stroke-linecap="round"/>
+    <circle cx="36" cy="40" r="17" fill="#F4C9A8"/>
+    <rect x="22" y="32" width="12" height="9" rx="1.5" fill="#fff" fill-opacity="0.3" stroke="#1d2230" stroke-width="1.8"/>
+    <rect x="38" y="32" width="12" height="9" rx="1.5" fill="#fff" fill-opacity="0.3" stroke="#1d2230" stroke-width="1.8"/>
+    <line x1="34" y1="36" x2="38" y2="36" stroke="#1d2230" stroke-width="1.8"/>
+    <circle cx="28" cy="36" r="1.5" fill="#1d2230"/>
+    <circle cx="44" cy="36" r="1.5" fill="#1d2230"/>
+    <path d="M 31 48 Q 36 50 41 48" stroke="#1d2230" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+    <circle cx="22" cy="44" r="2" fill="#f4a890" opacity="0.4"/>
+    <circle cx="50" cy="44" r="2" fill="#f4a890" opacity="0.4"/>
+  </svg>`,
+
+  // SN - Steve Nison: modern look + tiny green candlestick
+  'SN': `<svg viewBox="0 0 72 72" xmlns="http://www.w3.org/2000/svg">
+    <title>Steve Nison</title>
+    <path d="M 20 28 C 20 16, 28 14, 36 14 C 44 14, 52 16, 52 28 C 48 24, 42 22, 36 22 C 30 22, 24 24, 20 28 Z" fill="#2a2520"/>
+    <circle cx="36" cy="40" r="17" fill="#F4C9A8"/>
+    <ellipse cx="29" cy="36" rx="5.5" ry="4.5" fill="#fff" fill-opacity="0.3" stroke="#1d2230" stroke-width="1.6"/>
+    <ellipse cx="43" cy="36" rx="5.5" ry="4.5" fill="#fff" fill-opacity="0.3" stroke="#1d2230" stroke-width="1.6"/>
+    <line x1="34.5" y1="36" x2="37.5" y2="36" stroke="#1d2230" stroke-width="1.6"/>
+    <circle cx="29" cy="36" r="1.4" fill="#1d2230"/>
+    <circle cx="43" cy="36" r="1.4" fill="#1d2230"/>
+    <path d="M 30 48 Q 36 51 42 48" stroke="#1d2230" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+    <g transform="translate(60, 18)">
+      <line x1="0" y1="-3" x2="0" y2="9" stroke="#2d8659" stroke-width="1"/>
+      <rect x="-1.7" y="0" width="3.4" height="5" fill="#2d8659" stroke="#1d2230" stroke-width="0.5"/>
+    </g>
+    <circle cx="22" cy="44" r="2" fill="#f4a890" opacity="0.4"/>
+    <circle cx="50" cy="44" r="2" fill="#f4a890" opacity="0.4"/>
+  </svg>`,
+
+  // JB - John Bollinger: white beard, glasses, kind elder
+  'JB': `<svg viewBox="0 0 72 72" xmlns="http://www.w3.org/2000/svg">
+    <title>John Bollinger</title>
+    <path d="M 20 30 C 20 18, 28 16, 36 16 C 44 16, 52 18, 52 30 C 48 24, 42 24, 36 24 C 30 24, 24 24, 20 30 Z" fill="#a8a09a"/>
+    <circle cx="36" cy="40" r="17" fill="#F4C9A8"/>
+    <ellipse cx="36" cy="52" rx="15" ry="11" fill="#e8e2dc"/>
+    <path d="M 27 42 Q 30 40 36 42 Q 42 40 45 42 Q 42 44 36 43 Q 30 44 27 42 Z" fill="#cfc7bf"/>
+    <circle cx="29" cy="36" r="5" fill="#fff" fill-opacity="0.3" stroke="#1d2230" stroke-width="1.6"/>
+    <circle cx="43" cy="36" r="5" fill="#fff" fill-opacity="0.3" stroke="#1d2230" stroke-width="1.6"/>
+    <line x1="34" y1="36" x2="38" y2="36" stroke="#1d2230" stroke-width="1.6"/>
+    <circle cx="29" cy="36" r="1.4" fill="#1d2230"/>
+    <circle cx="43" cy="36" r="1.4" fill="#1d2230"/>
+    <circle cx="22" cy="42" r="2" fill="#f4a890" opacity="0.5"/>
+    <circle cx="50" cy="42" r="2" fill="#f4a890" opacity="0.5"/>
+  </svg>`
+};
+
+const legends = [
+  {
+    initials: 'CD', name: '찰스 다우', en: 'Charles Dow',
+    meta: '1851 — 1902 · USA',
+    nickname: '"월스트리트의 첫 기록자" 📰',
+    story: `원래는 신문기자였어요. 매일 시장을 기록하면서 <strong>'아, 패턴이 있네'</strong>를 처음으로 깨달은 사람. 월스트리트저널을 창간했고, 다우존스 지수도 그가 만들었어요. 정작 본인은 책 한 권 안 썼고 신문 사설로만 이론을 풀었어요. 죽고 나서 동료들이 정리한 게 '다우 이론'.`,
+    modern: `<strong>지금 우리가 쓰는 것:</strong> 우리가 보는 모든 차트 분석의 시작점. "추세는 3단계"라는 다우 이론이 그거예요. 진료소의 '추세' 활력 징후도 그가 깐 길이에요.`
+  },
+  {
+    initials: 'JL', name: '제시 리버모어', en: 'Jesse Livermore',
+    meta: '1877 — 1940 · USA',
+    nickname: '"보이 플런저" 🚀',
+    story: `14살에 학교 그만두고 주식 시세 적는 알바부터 시작. 자기만의 패턴으로 베팅했더니 5달러가 1000달러로! 평생 <strong>4번 백만장자가 됐다가 빈털터리</strong>가 됐다가 반복. 1929년 대공황 때 공매도로 1억 달러(현재 가치 약 1조 5천억) 벌었어요. 본인은 결국 비극적으로 생을 마감.`,
+    modern: `<strong>지금 우리가 쓰는 것:</strong> "추세는 친구"라는 명언. 모든 추세 추종 전략의 영혼. 진료소가 "추세를 거스르지 마세요" 외칠 때마다 그의 영향이에요.`
+  },
+  {
+    initials: 'RW', name: '리처드 와이코프', en: 'Richard Wyckoff',
+    meta: '1873 — 1934 · USA',
+    nickname: '"큰손 관찰자" 👁️',
+    story: `월스트리트 큰손들이 <strong>어떻게 미리 사놓고 일반인한테 파는지</strong> 관찰만 한 사람. "JP모건은 어떻게 매번 먼저 알지?" 하고 패턴을 정리. 매집(쌓기) → 상승 → 분산(털기) → 하락의 사이클을 발견했어요. 일반인을 위한 야간 학교까지 운영.`,
+    modern: `<strong>지금 우리가 쓰는 것:</strong> "차트는 큰손이 그린다"는 통찰. 거래량 분석의 기초. 진료소의 '저항선'에서 자꾸 막히는 건 큰손이 거기서 팔고 있기 때문이에요.`
+  },
+  {
+    initials: 'WW', name: '웰스 와일더', en: 'J. Welles Wilder Jr.',
+    meta: '1935 — 2021 · USA',
+    nickname: '"공돌이 트레이더" 🔧',
+    story: `기계공학자에서 부동산, 그리고 트레이딩으로 전향. 1978년에 쓴 책 한 권 <em>"새로운 기술적 매매 기법"</em>에 <strong>RSI, ATR, ADX, 파라볼릭 SAR</strong>을 다 넣어서 공개. 책 한 권으로 현대 기술 분석 도구의 절반을 만든 셈. 무덤에 와서 봐도 놀랄 듯.`,
+    modern: `<strong>지금 우리가 쓰는 것:</strong> 진료소의 'RSI 14일' 활력 징후가 바로 그의 작품. 거의 모든 차트에 그의 흔적이 박혀있어요.`
+  },
+  {
+    initials: 'SN', name: '스티브 니슨', en: 'Steve Nison',
+    meta: '1980s — 현재 · USA',
+    nickname: '"캔들스틱 전도사" 🕯️',
+    story: `1980년대 미국 애널리스트. 일본 무역상이 보여준 옛날 차트에서 <strong>"이거 뭐죠?"</strong> 했더니 <strong>"100년 전부터 일본 쌀시장에서 쓰던 거예요"</strong>. 이거 미국에 가져가야겠다 싶어서 책으로 정리. 1991년 <em>"일본 캔들스틱 차트 기법"</em> 출간하면서 서양에 캔들 차트를 본격 소개.`,
+    modern: `<strong>지금 우리가 쓰는 것:</strong> 모든 한국 증권사 차트의 기본인 양봉/음봉 캔들. 그 덕분에 우리가 보는 거예요. 그 전에 미국에선 라인 차트만 썼어요.`
+  },
+  {
+    initials: 'JB', name: '존 볼린저', en: 'John Bollinger',
+    meta: '1950 — 현재 · USA',
+    nickname: '"살아있는 전설" 🎯',
+    story: `1980년대 초 TV 금융 방송 진행자였어요. 매일 차트 보면서 <strong>"평균선 위아래로 표준편차로 밴드 그려보면 어떨까?"</strong> 떠올린 게 볼린저 밴드. 본인이 살아있는 동안 자기 이름이 전 세계 차트에 박힌 거 본 사람. CMT(공인 기술 분석사) 협회 회장도 역임.`,
+    modern: `<strong>지금 우리가 쓰는 것:</strong> 모든 트레이딩 플랫폼에 기본 탑재된 볼린저 밴드. 진료소 v2에 추가할 예정 😉`
+  }
+];
+
+(function buildLegendsSection() {
+  const container = document.getElementById('legends-container');
+  container.innerHTML = legends.map(l => `
+    <div class="legend">
+      <div class="legend-mono">${faces[l.initials] || l.initials}</div>
+      <div>
+        <div class="legend-name">${l.name}</div>
+        <div class="legend-en">${l.en}</div>
+        <div class="legend-meta">${l.meta}</div>
+        <span class="legend-nick">${l.nickname}</span>
+        <p class="legend-story">${l.story}</p>
+        <div class="legend-modern">${l.modern}</div>
+      </div>
+    </div>
+  `).join('');
 })();
 
 </script>
