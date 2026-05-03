@@ -60,6 +60,65 @@
   }
   @keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(0.8); } }
 
+  /* 차트 학교 링크 (상단 바) */
+  .school-link {
+    position: relative;
+    background: var(--bg-deep);
+    border: 2px solid var(--ink);
+    padding: 7px 16px;
+    border-radius: 999px;
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700; font-size: 13px;
+    color: var(--ink);
+    text-decoration: none;
+    box-shadow: 3px 3px 0 var(--ink);
+    transition: all 0.15s ease;
+    display: inline-flex; align-items: center; gap: 6px;
+    white-space: nowrap;
+  }
+  .school-link:hover {
+    transform: translate(-2px, -2px);
+    box-shadow: 5px 5px 0 var(--ink);
+    background: var(--ink); color: var(--bg-deep);
+  }
+  .school-link .arrow {
+    font-family: 'JetBrains Mono', monospace; font-size: 12px;
+  }
+  .school-link .new {
+    position: absolute;
+    top: -8px; right: -10px;
+    background: var(--bad); color: white;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px; font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 999px;
+    transform: rotate(8deg);
+    letter-spacing: 0.05em;
+    border: 1.5px solid var(--ink);
+  }
+
+  /* "?" 헬프 버튼 (카드 안) */
+  .vital-help, .box-help {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 24px; height: 24px; border-radius: 50%;
+    background: var(--bg-deep); border: 1.5px solid var(--ink);
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 800; font-size: 12px;
+    color: var(--ink); text-decoration: none;
+    cursor: pointer; flex-shrink: 0;
+    transition: all 0.2s ease;
+  }
+  .vital-help {
+    position: absolute;
+    top: 14px; right: 20px;
+    z-index: 5;
+  }
+  .box-help { margin-left: auto; }
+  .vital-help:hover, .box-help:hover {
+    background: var(--ink); color: var(--bg-deep);
+    transform: scale(1.15) rotate(10deg);
+  }
+
   .hero { text-align: center; padding: 20px 0 36px; }
   .hero .doctor-badge {
     display: inline-block; background: var(--bad-soft); color: var(--bad);
@@ -577,6 +636,10 @@
       <span>주식 진료소</span>
       <span class="badge">CLINIC</span>
     </div>
+    <a href="learn.html" class="school-link">
+      🎓 차트 학교 <span class="arrow">→</span>
+      <span class="new">NEW</span>
+    </a>
     <div class="pulse"><span class="dot"></span>OPEN · 24/7</div>
   </div>
 
@@ -670,12 +733,12 @@
     <span class="vitals-sub">자꾸 막히고, 자꾸 튕기는 가격대</span>
     <div class="levels-grid">
       <div class="level-box r">
-        <h3>🚧 저항선 (천장)</h3>
+        <h3>🚧 저항선 (천장) <a class="box-help" href="learn.html#L4" target="_blank" rel="noopener" title="저항선 배우러 가기">?</a></h3>
         <p class="desc">위로 가다가 자꾸 막히는 곳.<br/>여기 뚫으면 더 갈 수 있어요.</p>
         <div id="resistance-list"></div>
       </div>
       <div class="level-box s">
-        <h3>🛟 지지선 (바닥)</h3>
+        <h3>🛟 지지선 (바닥) <a class="box-help" href="learn.html#L3" target="_blank" rel="noopener" title="지지선 배우러 가기">?</a></h3>
         <p class="desc">아래로 가다가 자꾸 튕기는 곳.<br/>여기 깨지면 더 빠질 수 있어요.</p>
         <div id="support-list"></div>
       </div>
@@ -1259,7 +1322,7 @@ function buildVitals({ ma50Last, ma200Last, rsiLast, currentPrice, fullCloses })
 
   return [
     {
-      emoji: "📈", label: "추세 (Trend)",
+      emoji: "📈", label: "추세 (Trend)", lesson: "L5",
       value: above50 && above200 ? "상승" : !above50 && !above200 ? "하락" : "혼조",
       status: golden ? "골든크로스 ✨" : "데드크로스 ⚠️",
       tone: golden && above200 ? "good" : !golden && !above200 ? "bad" : "warn",
@@ -1268,7 +1331,7 @@ function buildVitals({ ma50Last, ma200Last, rsiLast, currentPrice, fullCloses })
         : "50일선이 200일선 아래. 차트가 \"조심해\"라고 말하는 중. 역추세 매수는 신중하게."
     },
     {
-      emoji: "🌡️", label: "RSI 14일",
+      emoji: "🌡️", label: "RSI 14일", lesson: "L6",
       value: rsiLast != null ? rsiLast.toFixed(0) : "—",
       status: rsiLast > 70 ? "과열 🔥" : rsiLast < 30 ? "냉각 🧊" : "정상 👍",
       tone: rsiLast > 70 ? "bad" : rsiLast < 30 ? "warn" : "good",
@@ -1339,6 +1402,7 @@ function renderVitals(items) {
   $("vitals").innerHTML = items.map(v => `
     <div class="vital">
       <span class="strip ${v.tone}"></span>
+      ${v.lesson ? `<a class="vital-help" href="learn.html#${v.lesson}" target="_blank" rel="noopener" title="이게 뭔지 배우기">?</a>` : ''}
       <span class="emoji-big">${v.emoji}</span>
       <div class="label-tiny">${v.label}</div>
       <div class="value-big">${v.value}</div>
