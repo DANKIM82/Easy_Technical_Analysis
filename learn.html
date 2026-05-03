@@ -1,0 +1,892 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>차트 학교 · 주식 진료소</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=Caveat:wght@400;600;700&family=Gowun+Dodum&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #fff8ee; --bg-deep: #ffeed3; --card: #ffffff;
+    --ink: #1d2230; --ink-soft: #555c6c; --ink-faded: #8a91a3;
+    --good: #2d8659; --good-soft: #d4ebd9;
+    --bad: #d94626; --bad-soft: #fadcd2;
+    --warn: #d9881a; --warn-soft: #fbe8c7;
+    --cool: #2563d9; --cool-soft: #d4e2fa;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    background: var(--bg); color: var(--ink);
+    font-family: 'Gowun Dodum', 'Bricolage Grotesque', system-ui, sans-serif;
+    line-height: 1.55; -webkit-font-smoothing: antialiased; overflow-x: hidden;
+  }
+  body::before {
+    content: ""; position: fixed; inset: 0;
+    background-image:
+      radial-gradient(circle at 8% 12%, rgba(217, 136, 26, 0.10), transparent 35%),
+      radial-gradient(circle at 92% 88%, rgba(45, 134, 89, 0.08), transparent 40%),
+      radial-gradient(circle at 50% 100%, rgba(217, 70, 38, 0.05), transparent 50%);
+    pointer-events: none; z-index: 0;
+  }
+  .wrap { position: relative; z-index: 1; max-width: 880px; margin: 0 auto; padding: 28px 32px 80px; }
+
+  .topbar {
+    display: flex; justify-content: space-between; align-items: center;
+    padding-bottom: 20px; border-bottom: 2px dashed var(--ink); margin-bottom: 36px;
+  }
+  .topbar a {
+    font-family: 'Bricolage Grotesque', sans-serif; font-weight: 800;
+    font-size: 20px; letter-spacing: -0.02em;
+    text-decoration: none; color: var(--ink);
+    display: flex; align-items: center; gap: 10px;
+    transition: opacity 0.15s ease;
+  }
+  .topbar a:hover { opacity: 0.6; }
+  .topbar a .arrow { font-family: 'JetBrains Mono', monospace; font-size: 14px; }
+  .topbar .badge {
+    background: var(--ink); color: var(--bg);
+    padding: 6px 14px; border-radius: 999px;
+    font-size: 12px; letter-spacing: 0.08em;
+    font-family: 'JetBrains Mono', monospace; transform: rotate(-2deg);
+  }
+
+  .hero { text-align: center; padding: 24px 0 32px; }
+  .hero .pill {
+    display: inline-block; background: var(--bad-soft); color: var(--bad);
+    padding: 8px 18px; border-radius: 999px;
+    font-family: 'Caveat', cursive; font-size: 22px; font-weight: 600;
+    transform: rotate(-2deg); margin-bottom: 18px;
+  }
+  .hero h1 {
+    font-family: 'Bricolage Grotesque', sans-serif; font-weight: 800;
+    font-size: clamp(44px, 7vw, 80px); line-height: 0.95;
+    letter-spacing: -0.04em; margin-bottom: 16px;
+  }
+  .hero h1 .accent {
+    background: var(--ink); color: var(--bg-deep);
+    padding: 0 18px; display: inline-block;
+    transform: rotate(-1deg); border-radius: 8px;
+  }
+  .hero .sub {
+    font-size: 17px; color: var(--ink-soft);
+    max-width: 480px; margin: 0 auto 28px;
+  }
+
+  .progress {
+    display: flex; gap: 10px; justify-content: center;
+    padding-top: 8px;
+  }
+  .progress .dot {
+    width: 36px; height: 8px; border-radius: 4px;
+    background: var(--bg-deep);
+    border: 1.5px solid var(--ink);
+    transition: background 0.4s ease, transform 0.3s ease;
+  }
+  .progress .dot.done {
+    background: var(--good);
+    transform: scale(1.05);
+  }
+
+  .lesson {
+    background: var(--card);
+    border: 2.5px solid var(--ink);
+    border-radius: 24px;
+    padding: 32px;
+    margin-bottom: 36px;
+    box-shadow: 8px 8px 0 var(--ink);
+  }
+  .lesson .num {
+    display: inline-block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--ink-soft);
+    letter-spacing: 0.1em;
+    background: var(--bg-deep);
+    padding: 4px 10px;
+    border-radius: 999px;
+    margin-bottom: 12px;
+  }
+  .lesson h2 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 800;
+    font-size: clamp(28px, 4vw, 36px);
+    line-height: 1.05;
+    letter-spacing: -0.02em;
+    margin-bottom: 12px;
+  }
+  .lesson .intro {
+    font-size: 16px;
+    color: var(--ink-soft);
+    margin-bottom: 22px;
+    line-height: 1.6;
+  }
+  .lesson .intro strong { color: var(--ink); background: var(--bg-deep); padding: 1px 6px; border-radius: 4px; }
+
+  .board {
+    background: var(--bg);
+    border: 2px dashed var(--ink-faded);
+    border-radius: 16px;
+    padding: 16px;
+    position: relative;
+  }
+  .board svg { width: 100%; display: block; }
+
+  .hint {
+    position: absolute;
+    top: 24px; left: 50%;
+    transform: translateX(-50%);
+    background: var(--ink); color: var(--bg);
+    padding: 8px 16px; border-radius: 999px;
+    font-family: 'Caveat', cursive;
+    font-weight: 600; font-size: 18px;
+    pointer-events: none;
+    animation: bobbing 2s ease-in-out infinite;
+    z-index: 5;
+    white-space: nowrap;
+  }
+  .hint.gone { display: none; }
+  @keyframes bobbing {
+    0%, 100% { transform: translateX(-50%) translateY(0); }
+    50% { transform: translateX(-50%) translateY(-4px); }
+  }
+
+  /* 점 + 선 스타일 */
+  .click-glow {
+    animation: pulseGlow 1.4s ease-in-out infinite;
+  }
+  .click-glow.done { animation: none; opacity: 0; }
+  @keyframes pulseGlow {
+    0%, 100% { r: 14; opacity: 0.45; }
+    50% { r: 26; opacity: 0; }
+  }
+  .click-dot { transition: all 0.2s ease; }
+  .click-dot.done { transform-origin: center; }
+  .click-area { cursor: pointer; }
+
+  .trace-line {
+    stroke-dasharray: 1500;
+    stroke-dashoffset: 1500;
+    transition: stroke-dashoffset 1s ease-out;
+  }
+  .trace-line.draw { stroke-dashoffset: 0; }
+
+  .annot {
+    font-family: 'Caveat', cursive;
+    font-weight: 600;
+    opacity: 0;
+    transition: opacity 0.4s ease;
+  }
+  .annot.live { opacity: 1; }
+
+  /* 성공 메시지 */
+  .success {
+    display: none;
+    background: var(--good-soft);
+    border: 2.5px solid var(--good);
+    border-radius: 16px;
+    padding: 22px 24px;
+    margin-top: 22px;
+    box-shadow: 5px 5px 0 var(--good);
+  }
+  .success.live { display: block; animation: pop 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55); }
+  @keyframes pop {
+    0% { transform: scale(0.85); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+  .success-head {
+    display: flex; align-items: center; gap: 14px; margin-bottom: 8px;
+  }
+  .success .ok-emoji {
+    font-size: 44px;
+    filter: drop-shadow(2px 2px 0 var(--card));
+  }
+  .success h3 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 800;
+    font-size: 22px;
+    color: var(--good);
+  }
+  .success p { color: var(--ink); font-size: 15px; line-height: 1.6; }
+  .success p strong { background: var(--card); padding: 1px 6px; border-radius: 4px; }
+  .success .callout {
+    margin-top: 14px;
+    background: var(--ink); color: var(--bg-deep);
+    padding: 10px 16px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .success .callout a {
+    color: var(--bg-deep);
+    font-weight: 700;
+    text-decoration: underline;
+  }
+
+  /* 슬라이더 */
+  .slider-row {
+    display: flex; align-items: center; gap: 16px;
+    margin-top: 20px; padding: 0 8px;
+  }
+  .slider-label {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 800;
+    font-size: 18px;
+    min-width: 110px;
+    text-align: center;
+    background: var(--bg-deep);
+    padding: 8px 14px;
+    border: 2px solid var(--ink);
+    border-radius: 999px;
+  }
+  input[type="range"] {
+    flex: 1;
+    -webkit-appearance: none; appearance: none;
+    height: 12px;
+    background: var(--bg-deep);
+    border: 2px solid var(--ink);
+    border-radius: 999px;
+    outline: none;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none;
+    width: 28px; height: 28px;
+    background: var(--ink);
+    border: 3px solid var(--bg-deep);
+    border-radius: 50%;
+    cursor: pointer;
+    transition: transform 0.15s;
+  }
+  input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.15); }
+  input[type="range"]::-moz-range-thumb {
+    width: 22px; height: 22px;
+    background: var(--ink);
+    border: 3px solid var(--bg-deep);
+    border-radius: 50%;
+    cursor: pointer;
+  }
+
+  /* 체온계 */
+  .thermo-wrap {
+    display: flex; gap: 36px;
+    align-items: center; justify-content: center;
+    padding: 30px 20px 50px;
+  }
+  .thermo-svg { flex-shrink: 0; }
+  .thermo-info { flex: 1; min-width: 0; max-width: 320px; }
+  .thermo-emoji-big {
+    font-size: 96px; line-height: 1;
+    margin-bottom: 8px;
+    filter: drop-shadow(3px 3px 0 var(--bg-deep));
+    transition: transform 0.3s;
+  }
+  .thermo-state {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 800;
+    font-size: 28px;
+    margin-bottom: 6px;
+    letter-spacing: -0.02em;
+  }
+  .thermo-msg {
+    font-family: 'Caveat', cursive;
+    font-weight: 600;
+    font-size: 22px;
+    color: var(--ink-soft);
+    line-height: 1.3;
+  }
+
+  @media (max-width: 720px) {
+    .wrap { padding: 16px 14px 60px; }
+    .lesson { padding: 22px 18px; }
+    .lesson h2 { font-size: 24px; }
+    .thermo-wrap { flex-direction: column; gap: 16px; padding: 16px; }
+    .thermo-info { text-align: center; }
+    .progress .dot { width: 28px; }
+  }
+
+  /* 최종 카드 */
+  .final-card {
+    display: none;
+    background: var(--ink);
+    color: var(--bg);
+    border-radius: 24px;
+    padding: 44px 40px;
+    margin-bottom: 36px;
+    text-align: center;
+    box-shadow: 8px 8px 0 var(--bg-deep);
+    position: relative;
+    overflow: hidden;
+  }
+  .final-card.live { display: block; animation: pop 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55); }
+  .final-card::before {
+    content: ""; position: absolute;
+    top: -100px; right: -80px; width: 240px; height: 240px;
+    background: radial-gradient(circle, var(--warn), transparent 65%);
+    opacity: 0.4;
+  }
+  .final-card .stamp {
+    display: inline-block; font-family: 'Caveat', cursive;
+    font-weight: 700; font-size: 24px;
+    background: var(--bg-deep); color: var(--ink);
+    padding: 6px 18px; border-radius: 6px;
+    transform: rotate(-2deg); margin-bottom: 16px;
+  }
+  .final-card h2 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 800;
+    font-size: clamp(32px, 5vw, 44px);
+    line-height: 1.1;
+    margin-bottom: 18px;
+    letter-spacing: -0.02em;
+    position: relative;
+  }
+  .final-card p { color: rgba(255, 248, 238, 0.78); font-size: 16px; margin-bottom: 24px; max-width: 520px; margin-left: auto; margin-right: auto; }
+  .final-card .cta {
+    display: inline-block;
+    background: var(--bg-deep); color: var(--ink);
+    padding: 14px 28px;
+    border-radius: 999px;
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700; font-size: 15px;
+    text-decoration: none;
+    box-shadow: 4px 4px 0 var(--bg);
+    transition: transform 0.15s;
+  }
+  .final-card .cta:hover { transform: translate(-2px, -2px); box-shadow: 6px 6px 0 var(--bg); }
+
+  .footer {
+    border-top: 2px dashed var(--ink); padding-top: 20px; margin-top: 24px;
+    display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px;
+    font-family: 'JetBrains Mono', monospace; font-size: 11px;
+    color: var(--ink-faded); letter-spacing: 0.05em;
+  }
+  .footer .signature {
+    font-family: 'Caveat', cursive; font-size: 18px;
+    color: var(--ink-soft); letter-spacing: 0;
+  }
+  .footer a { color: var(--ink); }
+
+  .reset-btn {
+    background: none; border: 2px solid var(--ink-faded);
+    color: var(--ink-soft);
+    padding: 6px 14px; border-radius: 999px;
+    font-family: 'Gowun Dodum', sans-serif; font-size: 12px;
+    cursor: pointer;
+    margin-top: 14px;
+    transition: all 0.15s;
+  }
+  .reset-btn:hover { border-color: var(--ink); color: var(--ink); }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <div class="topbar">
+    <a href="index.html"><span class="arrow">←</span> <span>📊 주식 진료소</span></a>
+    <span class="badge">🎓 차트 학교</span>
+  </div>
+
+  <div class="hero">
+    <div class="pill">📚 칠판 앞으로 모이세요</div>
+    <h1>차트 그리기,<br/><span class="accent">5분</span>이면 끝.</h1>
+    <p class="sub">읽지 말고 직접 그어봐요. 손이 한 번 그리면 평생 안 잊어요.</p>
+    <div class="progress" id="progress">
+      <span class="dot" data-i="0"></span>
+      <span class="dot" data-i="1"></span>
+      <span class="dot" data-i="2"></span>
+      <span class="dot" data-i="3"></span>
+      <span class="dot" data-i="4"></span>
+      <span class="dot" data-i="5"></span>
+    </div>
+  </div>
+
+  <!-- ============ LESSON 1: 상승 추세선 ============ -->
+  <div class="lesson" id="L1">
+    <span class="num">레슨 01 / 06</span>
+    <h2>↗️ 상승 추세선 그리기</h2>
+    <p class="intro">가격이 위로 갈 때, <strong>점점 더 높은 곳</strong>에서 튕겨오르죠? 그 두 점을 따라 그어보세요. 빨간 점을 차례로 누르면 돼요.</p>
+    <div class="board">
+      <div class="hint" id="hint1">👇 빨간 점 두 개를 눌러보세요</div>
+      <svg id="svg1" viewBox="0 0 600 320"></svg>
+    </div>
+    <div class="success" id="ok1">
+      <div class="success-head">
+        <div class="ok-emoji">🎉</div>
+        <h3>잘 그렸어요!</h3>
+      </div>
+      <p>이게 <strong>상승 추세선</strong>이에요. 가격이 이 선 위에 머무는 동안은 추세가 살아있어요. 깨지면? 추세 변화 신호.</p>
+      <div class="callout">💡 진료소에선 — '추세 (Trend)' 활력 징후가 자동 판단해줘요</div>
+    </div>
+  </div>
+
+  <!-- ============ LESSON 2: 하락 추세선 ============ -->
+  <div class="lesson" id="L2">
+    <span class="num">레슨 02 / 06</span>
+    <h2>↘️ 하락 추세선 그리기</h2>
+    <p class="intro">반대로, 가격이 떨어질 땐 <strong>점점 더 낮은 곳</strong>에서 막혀요. 두 봉우리를 이어보세요.</p>
+    <div class="board">
+      <div class="hint" id="hint2">👇 빨간 점 두 개를 눌러보세요</div>
+      <svg id="svg2" viewBox="0 0 600 320"></svg>
+    </div>
+    <div class="success" id="ok2">
+      <div class="success-head">
+        <div class="ok-emoji">🎯</div>
+        <h3>완벽해요!</h3>
+      </div>
+      <p>이게 <strong>하락 추세선</strong>이에요. 가격이 이 선 아래에 있는 동안은 추세가 살아있어요. 위로 뚫으면 추세 전환 후보.</p>
+      <div class="callout">💡 진료소에선 — 빨간 톤의 평결 (🐻 약세, 🥶 너무 차가움)으로 표시</div>
+    </div>
+  </div>
+
+  <!-- ============ LESSON 3: 지지선 ============ -->
+  <div class="lesson" id="L3">
+    <span class="num">레슨 03 / 06</span>
+    <h2>🛟 지지선 — 자꾸 튕기는 바닥</h2>
+    <p class="intro">가격이 어떤 가격대에 닿을 때마다 <strong>튕겨 올라와요.</strong> 마치 바닥에 부딪히는 공처럼! 세 번 튕긴 점들을 차례로 눌러보세요.</p>
+    <div class="board">
+      <div class="hint" id="hint3">👇 초록 점 세 개를 모두 누르세요</div>
+      <svg id="svg3" viewBox="0 0 600 320"></svg>
+    </div>
+    <div class="success" id="ok3">
+      <div class="success-head">
+        <div class="ok-emoji">🛟</div>
+        <h3>지지선 발견!</h3>
+      </div>
+      <p>이 가격대에서 <strong>여러 번 튕긴다</strong>는 건, 사람들이 '여기서 사고싶다' 생각하는 가격이라는 뜻이에요. 깨지면? 추가 하락 위험 ↓</p>
+      <div class="callout">💡 진료소에선 — '🛟 지지선' 박스에 별점과 함께 자동 표시</div>
+    </div>
+  </div>
+
+  <!-- ============ LESSON 4: 저항선 ============ -->
+  <div class="lesson" id="L4">
+    <span class="num">레슨 04 / 06</span>
+    <h2>🚧 저항선 — 자꾸 막히는 천장</h2>
+    <p class="intro">반대로, 가격이 어떤 가격대까지 오면 <strong>자꾸 머리가 막혀요.</strong> 천장에 부딪히는 풍선 같은 거죠. 세 번 막힌 점들을 눌러보세요.</p>
+    <div class="board">
+      <div class="hint" id="hint4">👇 빨간 점 세 개를 모두 누르세요</div>
+      <svg id="svg4" viewBox="0 0 600 320"></svg>
+    </div>
+    <div class="success" id="ok4">
+      <div class="success-head">
+        <div class="ok-emoji">🚧</div>
+        <h3>저항선 발견!</h3>
+      </div>
+      <p>이 가격대에서 <strong>여러 번 막혔다</strong>는 건, 거기서 파는 사람이 많다는 뜻. 뚫으면? 강한 매수 신호 ↑</p>
+      <div class="callout">💡 진료소에선 — '🚧 저항선' 박스에서 가까운 천장 3개를 알려줘요</div>
+    </div>
+  </div>
+
+  <!-- ============ LESSON 5: 이동평균선 ============ -->
+  <div class="lesson" id="L5">
+    <span class="num">레슨 05 / 06</span>
+    <h2>〰️ 이동평균선 — 부드럽게 펴기</h2>
+    <p class="intro">차트는 들쭉날쭉하죠? <strong>최근 N일 평균</strong>을 내면 부드러운 선이 돼요. 슬라이더로 N을 직접 바꿔보세요.</p>
+    <div class="board">
+      <svg id="svg5" viewBox="0 0 600 280"></svg>
+      <div class="slider-row">
+        <span class="slider-label" id="ma-label">20일 평균</span>
+        <input type="range" id="ma-slider" min="3" max="100" value="20" />
+      </div>
+    </div>
+    <div class="success" id="ok5">
+      <div class="success-head">
+        <div class="ok-emoji">✨</div>
+        <h3>슬라이더 마스터!</h3>
+      </div>
+      <p>평균 일수가 <strong>길수록</strong> 부드러워지죠? 짧으면 민감하고, 길면 둔하지만 추세를 잘 보여줘요. 보통 <strong>50일선</strong>(단기)과 <strong>200일선</strong>(장기)을 같이 봐요.</p>
+      <div class="callout">💡 진료소에선 — 50일선(주황)과 200일선(회색)이 차트에 자동으로 그려져요</div>
+    </div>
+  </div>
+
+  <!-- ============ LESSON 6: RSI ============ -->
+  <div class="lesson" id="L6">
+    <span class="num">레슨 06 / 06</span>
+    <h2>🌡️ RSI — 차트의 체온계</h2>
+    <p class="intro">주식이 너무 <strong>뜨거워졌나</strong> 너무 <strong>차가워졌나</strong>를 0~100 숫자로 알려줘요. 슬라이더로 직접 체온을 움직여봐요.</p>
+    <div class="board">
+      <div class="thermo-wrap">
+        <svg class="thermo-svg" id="thermo" viewBox="0 0 100 280" width="100" height="280"></svg>
+        <div class="thermo-info">
+          <div class="thermo-emoji-big" id="thermo-emoji">😊</div>
+          <div class="thermo-state" id="thermo-state">정상 (50)</div>
+          <p class="thermo-msg" id="thermo-msg">과열도 침체도 아닌 평온 상태</p>
+        </div>
+      </div>
+      <div class="slider-row">
+        <span class="slider-label" id="rsi-label">50</span>
+        <input type="range" id="rsi-slider" min="0" max="100" value="50" />
+      </div>
+    </div>
+    <div class="success" id="ok6">
+      <div class="success-head">
+        <div class="ok-emoji">🎓</div>
+        <h3>RSI 마스터!</h3>
+      </div>
+      <p><strong>70 이상</strong>은 너무 뜨거워서 한 번 식을 자리, <strong>30 이하</strong>는 너무 식어서 한 번 데워질 자리. 강한 추세에선 70 위에 오래 있을 수도 있으니 만능은 아니에요.</p>
+      <div class="callout">💡 진료소에선 — 'RSI 14일' 활력 징후가 자동으로 체온 측정</div>
+    </div>
+  </div>
+
+  <!-- ============ FINAL ============ -->
+  <div class="final-card" id="final">
+    <span class="stamp">졸업장 🎓</span>
+    <h2>축하해요!<br/>차트 기초 6개 끝!</h2>
+    <p>이제 차트 봤을 때 안 무서울 거예요. 진료소로 돌아가서 진짜 종목으로 연습해봐요.</p>
+    <a href="index.html" class="cta">🩺 진료소로 돌아가기 →</a>
+  </div>
+
+  <div class="footer">
+    <span>🎓 차트 학교 v1</span>
+    <span class="signature">손으로 그어보면 평생 기억남 ✍️</span>
+    <a href="index.html">진료소 →</a>
+  </div>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+
+/* ========== 차트 헬퍼 ========== */
+function buildChart(bars, vw = 600, vh = 320, lineColor = '#8a91a3') {
+  const padL = 30, padR = 30, padT = 36, padB = 36;
+  const cw = vw - padL - padR, ch = vh - padT - padB;
+  const min = Math.min(...bars) * 0.96;
+  const max = Math.max(...bars) * 1.04;
+  const xOf = (i) => padL + (i / (bars.length - 1)) * cw;
+  const yOf = (p) => padT + (1 - (p - min) / (max - min)) * ch;
+  const points = bars.map((p, i) => `${xOf(i).toFixed(1)},${yOf(p).toFixed(1)}`).join(' ');
+  return {
+    chartLine: `<polyline points="${points}" fill="none" stroke="${lineColor}" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/>`,
+    areaPath: `<polygon points="${padL},${vh - padB} ${points} ${vw - padR},${vh - padB}" fill="rgba(29,34,48,0.04)"/>`,
+    xOf, yOf, padL, padR, padT, padB, cw, ch, min, max, vw, vh
+  };
+}
+
+/* ========== 진행도 ========== */
+const completed = new Set();
+function markDone(idx) {
+  if (completed.has(idx)) return;
+  completed.add(idx);
+  document.querySelectorAll('.progress .dot').forEach(d => {
+    if (completed.has(+d.dataset.i)) d.classList.add('done');
+  });
+  if (completed.size === 6) {
+    setTimeout(() => {
+      $('final').classList.add('live');
+      $('final').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 800);
+  }
+}
+
+/* ========== Trace 레슨 헬퍼 ========== */
+function setupTrace(opts) {
+  const {
+    svgId, bars, dots, line, color, hintId, successId, lessonIdx, annotation
+  } = opts;
+  const svg = $(svgId);
+  const c = buildChart(bars);
+
+  // 점 좌표 변환
+  const dotXY = dots.map(d => ({ x: c.xOf(d.bar), y: c.yOf(d.price) }));
+
+  // 최종 선 좌표 (확장)
+  const fromX = line.from.x !== undefined ? line.from.x : c.xOf(line.from.bar);
+  const fromY = line.from.y !== undefined ? line.from.y : c.yOf(line.from.price);
+  const toX = line.to.x !== undefined ? line.to.x : c.xOf(line.to.bar);
+  const toY = line.to.y !== undefined ? line.to.y : c.yOf(line.to.price);
+
+  let html = '';
+  html += c.areaPath;
+  html += c.chartLine;
+
+  // 그림자 선 (흐릿한 점선)
+  html += `<line x1="${fromX}" y1="${fromY}" x2="${toX}" y2="${toY}"
+    stroke="${color}" stroke-width="3" stroke-dasharray="9 7" opacity="0.22" stroke-linecap="round"/>`;
+
+  // 채워질 선 (처음엔 안 보임)
+  html += `<line class="trace-line" id="${svgId}-line"
+    x1="${fromX}" y1="${fromY}" x2="${toX}" y2="${toY}"
+    stroke="${color}" stroke-width="3.5" stroke-linecap="round" fill="none"/>`;
+
+  // 클릭 점들
+  dotXY.forEach((d, i) => {
+    html += `
+      <circle class="click-glow" data-idx="${i}" cx="${d.x}" cy="${d.y}" r="14" fill="${color}"/>
+      <circle class="click-dot" data-idx="${i}" cx="${d.x}" cy="${d.y}" r="9" fill="${color}" stroke="white" stroke-width="3"/>
+      <circle class="click-area" data-idx="${i}" cx="${d.x}" cy="${d.y}" r="26" fill="transparent"/>
+    `;
+  });
+
+  // 주석 (성공 후 보임)
+  if (annotation) {
+    html += `<text class="annot" id="${svgId}-annot"
+      x="${annotation.x}" y="${annotation.y}" font-size="22" fill="${color}"
+      text-anchor="${annotation.anchor || 'start'}">${annotation.text}</text>`;
+  }
+
+  svg.innerHTML = html;
+
+  const clicked = new Set();
+  svg.querySelectorAll('.click-area').forEach(el => {
+    el.addEventListener('click', () => {
+      const idx = +el.dataset.idx;
+      if (clicked.has(idx)) return;
+      clicked.add(idx);
+
+      // 그 점만 done 표시
+      svg.querySelectorAll(`.click-glow[data-idx="${idx}"], .click-dot[data-idx="${idx}"]`)
+        .forEach(d => d.classList.add('done'));
+
+      // 힌트 숨기기
+      if (clicked.size === 1) {
+        const h = $(hintId);
+        if (h) h.classList.add('gone');
+      }
+
+      // 모두 클릭됨
+      if (clicked.size === dots.length) {
+        setTimeout(() => svg.querySelector(`#${svgId}-line`).classList.add('draw'), 150);
+        if (annotation) {
+          setTimeout(() => svg.querySelector(`#${svgId}-annot`).classList.add('live'), 1100);
+        }
+        setTimeout(() => {
+          $(successId).classList.add('live');
+          markDone(lessonIdx);
+        }, 1200);
+      }
+    });
+  });
+}
+
+/* ========== Lesson 1: 상승 추세선 ========== */
+// 두 점 사이 기울기 = (138-100)/(14-2) = 3.17/bar. 차트 끝 bar 24에서 100 + 22*3.17 ≈ 170
+setupTrace({
+  svgId: 'svg1',
+  bars: [110, 105, 100, 108, 116, 124, 120, 130, 138, 132, 128, 138, 148, 144, 138, 148, 158, 162, 156, 165, 175, 170, 165, 178, 190],
+  dots: [
+    { bar: 2, price: 100 },
+    { bar: 14, price: 138 }
+  ],
+  line: {
+    from: { bar: 0, price: 93.5 },
+    to: { bar: 24, price: 169.5 }
+  },
+  color: '#2d8659',
+  hintId: 'hint1',
+  successId: 'ok1',
+  lessonIdx: 0
+});
+
+/* ========== Lesson 2: 하락 추세선 ========== */
+// 두 점: (4, 190), (13, 168). 기울기 = (168-190)/9 = -2.44/bar
+// 차트 끝 bar 24: 190 + (24-4)*(-2.44) = 141.2
+setupTrace({
+  svgId: 'svg2',
+  bars: [180, 175, 170, 178, 190, 185, 178, 168, 175, 172, 165, 158, 162, 168, 158, 148, 152, 155, 145, 138, 142, 148, 138, 128, 122],
+  dots: [
+    { bar: 4, price: 190 },
+    { bar: 13, price: 168 }
+  ],
+  line: {
+    from: { bar: 0, price: 199.7 },
+    to: { bar: 24, price: 141.3 }
+  },
+  color: '#d94626',
+  hintId: 'hint2',
+  successId: 'ok2',
+  lessonIdx: 1
+});
+
+/* ========== Lesson 3: 지지선 (수평) ========== */
+setupTrace({
+  svgId: 'svg3',
+  bars: [120, 125, 115, 105, 100, 110, 118, 125, 120, 110, 102, 100, 108, 118, 122, 115, 105, 100, 105, 115, 122, 128, 122, 115, 110],
+  dots: [
+    { bar: 4, price: 100 },
+    { bar: 11, price: 100 },
+    { bar: 17, price: 100 }
+  ],
+  line: {
+    from: { bar: 0, price: 100 },
+    to: { bar: 24, price: 100 }
+  },
+  color: '#2d8659',
+  hintId: 'hint3',
+  successId: 'ok3',
+  lessonIdx: 2
+});
+
+/* ========== Lesson 4: 저항선 ========== */
+setupTrace({
+  svgId: 'svg4',
+  bars: [120, 130, 140, 148, 150, 145, 138, 145, 150, 142, 132, 140, 148, 150, 142, 132, 138, 145, 150, 144, 135, 130, 138, 142, 138],
+  dots: [
+    { bar: 4, price: 150 },
+    { bar: 8, price: 150 },
+    { bar: 13, price: 150 }
+  ],
+  line: {
+    from: { bar: 0, price: 150 },
+    to: { bar: 24, price: 150 }
+  },
+  color: '#d94626',
+  hintId: 'hint4',
+  successId: 'ok4',
+  lessonIdx: 3
+});
+
+/* ========== Lesson 5: 이동평균선 슬라이더 ========== */
+(function setupMA() {
+  // 100개 정도의 현실적인 가격 데이터
+  const bars = [];
+  let p = 100;
+  for (let i = 0; i < 100; i++) {
+    p += (Math.sin(i * 0.15) * 1.5) + (Math.sin(i * 0.4) * 0.8) + ((Math.random() - 0.5) * 1.8);
+    bars.push(p);
+  }
+
+  function sma(arr, period) {
+    return arr.map((_, i) => {
+      if (i + 1 < period) return null;
+      const slice = arr.slice(i + 1 - period, i + 1);
+      return slice.reduce((s, x) => s + x, 0) / period;
+    });
+  }
+
+  const svg = $('svg5');
+  const slider = $('ma-slider');
+  const label = $('ma-label');
+
+  function render() {
+    const period = +slider.value;
+    label.textContent = `${period}일 평균`;
+
+    const c = buildChart(bars, 600, 280, '#1d2230');
+    const maData = sma(bars, period);
+    const maPoints = maData
+      .map((v, i) => v == null ? null : `${c.xOf(i).toFixed(1)},${c.yOf(v).toFixed(1)}`)
+      .filter(Boolean).join(' ');
+
+    let html = c.areaPath;
+    html += c.chartLine;
+    if (maPoints) {
+      html += `<polyline points="${maPoints}" fill="none" stroke="#d9881a" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>`;
+    }
+    // 범례
+    html += `<rect x="20" y="16" width="14" height="3" fill="#1d2230"/>`;
+    html += `<text x="38" y="20" font-family="JetBrains Mono" font-size="10" fill="#555c6c">실제 가격</text>`;
+    html += `<rect x="100" y="16" width="14" height="3" fill="#d9881a"/>`;
+    html += `<text x="118" y="20" font-family="JetBrains Mono" font-size="10" fill="#555c6c">${period}일 평균</text>`;
+
+    svg.innerHTML = html;
+  }
+
+  const seenBuckets = new Set();
+  slider.addEventListener('input', () => {
+    render();
+    // 슬라이더 값을 "구간"으로 그룹핑 (5-25, 25-50, 50-75, 75-100)
+    const v = +slider.value;
+    if (v < 25) seenBuckets.add('short');
+    else if (v < 50) seenBuckets.add('mid');
+    else if (v < 75) seenBuckets.add('long');
+    else seenBuckets.add('xlong');
+    if (seenBuckets.size >= 3) {  // 3개 이상의 다른 영역을 둘러봤을 때
+      $('ok5').classList.add('live');
+      markDone(4);
+    }
+  });
+  render();
+})();
+
+/* ========== Lesson 6: RSI 체온계 ========== */
+(function setupRSI() {
+  const svg = $('thermo');
+  const slider = $('rsi-slider');
+  const labelEl = $('rsi-label');
+  const emojiEl = $('thermo-emoji');
+  const stateEl = $('thermo-state');
+  const msgEl = $('thermo-msg');
+
+  // 체온계 SVG: 100x280, 본체 + 액체
+  function render() {
+    const v = +slider.value;
+    labelEl.textContent = v;
+
+    // 색상: 0-30 차가움(파랑), 30-70 정상(초록), 70-100 뜨거움(빨강)
+    let color, emoji, state, msg;
+    if (v >= 70) {
+      color = '#d94626';
+      emoji = '🔥';
+      state = `과열 (${v})`;
+      msg = '체온 38도! 잠깐 식을 자리예요';
+    } else if (v <= 30) {
+      color = '#2563d9';
+      emoji = '🧊';
+      state = `냉각 (${v})`;
+      msg = '체온 35도. 곧 데워질 자리예요';
+    } else {
+      color = '#2d8659';
+      emoji = '😊';
+      state = `정상 (${v})`;
+      msg = '과열도 침체도 아닌 평온';
+    }
+
+    emojiEl.textContent = emoji;
+    stateEl.textContent = state;
+    msgEl.textContent = msg;
+
+    // 체온계 그리기
+    // viewBox 100x280
+    // 본체: x=35-65, y=10-240 (높이 230)
+    // 구: 중심 (50, 250), 반지름 22
+    // 액체 높이: v=0이면 거의 비고, v=100이면 꼭대기까지
+
+    const tubeTop = 14;
+    const tubeBottom = 240;
+    const tubeHeight = tubeBottom - tubeTop;
+    const fillY = tubeBottom - (v / 100) * tubeHeight;
+
+    let html = '';
+    // 눈금
+    [0, 30, 50, 70, 100].forEach(mark => {
+      const y = tubeBottom - (mark / 100) * tubeHeight;
+      html += `<line x1="22" y1="${y}" x2="32" y2="${y}" stroke="#1d2230" stroke-width="1.5"/>`;
+      html += `<text x="18" y="${y + 3}" font-family="JetBrains Mono" font-size="9" fill="#555c6c" text-anchor="end">${mark}</text>`;
+    });
+    // 70/30 위험 영역 표시
+    const y70 = tubeBottom - (70 / 100) * tubeHeight;
+    const y30 = tubeBottom - (30 / 100) * tubeHeight;
+    html += `<rect x="68" y="${tubeTop}" width="14" height="${y70 - tubeTop}" fill="#fadcd2" rx="2"/>`;
+    html += `<text x="75" y="${(tubeTop + y70) / 2}" font-family="Caveat" font-weight="700" font-size="14" fill="#d94626" text-anchor="middle" transform="rotate(90 75 ${(tubeTop + y70) / 2})">과열</text>`;
+    html += `<rect x="68" y="${y30}" width="14" height="${tubeBottom - y30}" fill="#d4e2fa" rx="2"/>`;
+    html += `<text x="75" y="${(y30 + tubeBottom) / 2}" font-family="Caveat" font-weight="700" font-size="14" fill="#2563d9" text-anchor="middle" transform="rotate(90 75 ${(y30 + tubeBottom) / 2})">냉각</text>`;
+    // 본체 (튜브) 외곽
+    html += `<rect x="38" y="${tubeTop}" width="24" height="${tubeHeight}" rx="12" fill="white" stroke="#1d2230" stroke-width="2.5"/>`;
+    // 액체 (채워진 부분)
+    html += `<rect x="40" y="${fillY}" width="20" height="${tubeBottom - fillY}" fill="${color}" />`;
+    // 구 (밑부분)
+    html += `<circle cx="50" cy="252" r="22" fill="${color}" stroke="#1d2230" stroke-width="2.5"/>`;
+
+    svg.innerHTML = html;
+  }
+
+  let interactions = 0;
+  let saw70 = false, saw30 = false;
+  slider.addEventListener('input', () => {
+    render();
+    const v = +slider.value;
+    if (v >= 70) saw70 = true;
+    if (v <= 30) saw30 = true;
+    interactions++;
+    if ((saw70 && saw30) || interactions >= 6) {
+      $('ok6').classList.add('live');
+      markDone(5);
+    }
+  });
+  render();
+})();
+
+</script>
+</body>
+</html>
