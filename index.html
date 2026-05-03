@@ -1199,7 +1199,10 @@ function rsi(closes, period = 14) {
   return out;
 }
 
-function findLevels(bars) {
+function findLevels(bars, currentPrice) {
+  if (!bars || bars.length === 0) return { resistances: [], supports: [] };
+  if (currentPrice == null) currentPrice = bars[bars.length - 1].c;
+
   const w = 8;
   const hi = [], lo = [];
   for (let i = w; i < bars.length - w; i++) {
@@ -1214,25 +1217,56 @@ function findLevels(bars) {
   const closes = bars.map(b => b.c);
   const range = Math.max(...closes) - Math.min(...closes);
   const tol = range * 0.025;
-  const cluster = (pts) => {
-    const sorted = [...pts].sort((a, b) => a.p - b.p);
-    const groups = [];
-    for (const pt of sorted) {
-      const last = groups[groups.length - 1];
-      if (last && Math.abs(pt.p - last.avg) < tol) {
-        last.points.push(pt);
-        last.avg = last.points.reduce((s, x) => s + x.p, 0) / last.points.length;
-      } else {
-        groups.push({ avg: pt.p, points: [pt] });
-      }
+  const totalBars = bars.length;
+  // 현재가에서 너무 멀면 제외 (위/아래 각 40%)
+  const MAX_DIST_PCT = 0.40;
+
+  // 모든 피벗(고+저)을 합쳐서 한 번에 클러스터링 → 현재가 기준으로 분류
+  const allPivots = [...hi, ...lo];
+  const sorted = [...allPivots].sort((a, b) => a.p - b.p);
+  const groups = [];
+  for (const pt of sorted) {
+    const last = groups[groups.length - 1];
+    if (last && Math.abs(pt.p - last.avg) < tol) {
+      last.points.push(pt);
+      last.avg = last.points.reduce((s, x) => s + x.p, 0) / last.points.length;
+    } else {
+      groups.push({ avg: pt.p, points: [pt] });
     }
-    return groups
-      .filter(g => g.points.length >= 2)
-      .map(g => ({ price: g.avg, touches: g.points.length, lastIdx: Math.max(...g.points.map(p => p.i)) }))
-      .sort((a, b) => b.touches - a.touches)
-      .slice(0, 3);
-  };
-  return { resistances: cluster(hi), supports: cluster(lo) };
+  }
+
+  // 각 클러스터에 점수 매기기
+  const scored = groups
+    .filter(g => g.points.length >= 2)
+    .map(g => {
+      const lastIdx = Math.max(...g.points.map(p => p.i));
+      // 최근일수록 가중치 ↑ (가장 오래된 0.3, 가장 최근 1.0)
+      const recencyWeight = 0.3 + 0.7 * (lastIdx / Math.max(totalBars - 1, 1));
+      // 현재가에서 가까울수록 가중치 ↑
+      const distPct = Math.abs(g.avg - currentPrice) / currentPrice;
+      const distWeight = Math.max(0, 1 - distPct * 1.8);
+      return {
+        price: g.avg,
+        touches: g.points.length,
+        lastIdx,
+        score: g.points.length * recencyWeight * Math.max(distWeight, 0.15),
+        distPct
+      };
+    })
+    // 너무 멀면 컷
+    .filter(g => g.distPct < MAX_DIST_PCT);
+
+  // 현재가 기준 분류 + 점수순 정렬 + 상위 2개
+  const resistances = scored
+    .filter(g => g.price > currentPrice)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 2);
+  const supports = scored
+    .filter(g => g.price < currentPrice)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 2);
+
+  return { resistances, supports };
 }
 
 /* ==================== 포맷 ==================== */
@@ -1368,11 +1402,14 @@ function drawChart(bars, ma50Vis, ma200Vis, levels, currentPrice, rangeMonths) {
     <animate attributeName="r" from="8" to="22" dur="1.4s" repeatCount="indefinite"/>
     <animate attributeName="opacity" from="0.5" to="0" dur="1.4s" repeatCount="indefinite"/>
   </circle>`;
-  const bubbleX = lx - 100, bubbleY = ly - 38;
-  if (bubbleX > padL + 30) {
+  const bubbleW = 80, bubbleH = 22;
+  const bubbleX = lx - bubbleW - 10;
+  const bubbleY = ly - 38;
+  if (bubbleX > padL + 20) {
     s += `<g>
-      <path d="M ${bubbleX} ${bubbleY} h 86 v -22 h -86 z M ${bubbleX + 70} ${bubbleY} l 8 12 l -16 0 z" fill="#1d2230" />
-      <text x="${bubbleX + 43}" y="${bubbleY - 6}" font-size="12" fill="white" text-anchor="middle" font-weight="700">지금 여기!</text>
+      <rect x="${bubbleX}" y="${bubbleY}" width="${bubbleW}" height="${bubbleH}" rx="5" fill="#1d2230"/>
+      <path d="M ${bubbleX + bubbleW - 4} ${bubbleY + bubbleH} L ${lx - 4} ${ly - 13} L ${bubbleX + bubbleW - 18} ${bubbleY + bubbleH} z" fill="#1d2230"/>
+      <text x="${bubbleX + bubbleW / 2}" y="${bubbleY + 15}" font-size="12" fill="white" text-anchor="middle" font-weight="700">지금 여기!</text>
     </g>`;
   }
   // 현재가 라벨 (잉크색 핀, 우측, 다른 라벨 위에 우선 노출)
@@ -1663,8 +1700,8 @@ function applyRange(rangeMonths) {
   const ma200Last = state.fullMa200[state.fullMa200.length - 1];
   const rsiLast = state.fullRsi[state.fullRsi.length - 1];
 
-  // 레벨은 보이는 범위에서만
-  const levels = findLevels(visibleBars);
+  // 레벨은 보이는 범위에서만, 현재가 기준으로 분류
+  const levels = findLevels(visibleBars, currentPrice);
 
   drawChart(visibleBars, visibleMa50, visibleMa200, levels, currentPrice, rangeMonths);
   renderVerdict(buildVerdict({ ma50Last, ma200Last, rsiLast, currentPrice }));
