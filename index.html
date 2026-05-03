@@ -1250,7 +1250,16 @@ function findLevels(bars, currentPrice) {
   // 현재가에서 너무 멀면 제외 (위/아래 각 50%)
   const MAX_DIST_PCT = 0.50;
 
-  const cluster = (pts) => {
+  // 저항 후보: 현재가 위의 고점 피벗 (그리고 폴라리티 플립 시 위로 뚫린 저점도 포함 가능)
+  const resistanceCandidates = hi.filter(h => h.p > currentPrice);
+  // 지지 후보: 현재가 아래의 저점 피벗
+  // (+ 폴라리티 플립: 현재가 아래의 옛 고점도 지지로 작용 가능)
+  const supportCandidates = [
+    ...lo.filter(l => l.p < currentPrice),
+    ...hi.filter(h => h.p < currentPrice)  // 깨진 저항 → 지지로 변신
+  ];
+
+  const cluster = (pts, allowSingleIfRecent) => {
     const sorted = [...pts].sort((a, b) => a.p - b.p);
     const groups = [];
     for (const pt of sorted) {
@@ -1264,7 +1273,16 @@ function findLevels(bars, currentPrice) {
     }
 
     return groups
-      .filter(g => g.points.length >= 2)
+      .filter(g => {
+        if (g.points.length >= 2) return true;
+        // 1번만 터친 경우: 최근(전체의 70% 이후)에 발생한 거면 OK
+        // → ATH 부근 저항이 1번만 터졌어도 보여주기 위함
+        if (allowSingleIfRecent) {
+          const lastIdx = Math.max(...g.points.map(p => p.i));
+          return lastIdx > totalBars * 0.70;
+        }
+        return false;
+      })
       .map(g => {
         const lastIdx = Math.max(...g.points.map(p => p.i));
         // 최근 가중치: 0.3 (옛날) → 1.0 (최근)
@@ -1285,7 +1303,12 @@ function findLevels(bars, currentPrice) {
       .slice(0, 2);
   };
 
-  return { resistances: cluster(hi), supports: cluster(lo) };
+  return {
+    // 저항: 가까운 1회 터치도 허용 (ATH 근처 천장 잡기 위함)
+    resistances: cluster(resistanceCandidates, true),
+    // 지지: 2회 이상 터치 필수
+    supports: cluster(supportCandidates, false)
+  };
 }
 
 /* ==================== 대각선 추세선 ==================== */
