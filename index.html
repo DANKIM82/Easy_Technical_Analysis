@@ -599,6 +599,14 @@
   }
   .legend-item { display: flex; align-items: center; gap: 6px; }
   .legend-swatch { width: 16px; height: 3px; border-radius: 2px; }
+  .legend-swatch.diag {
+    width: 18px; height: 14px; background: transparent !important;
+    border-radius: 0;
+    background-image: linear-gradient(to top right, transparent calc(50% - 1px), currentColor calc(50% - 1px), currentColor calc(50% + 1px), transparent calc(50% + 1px)) !important;
+  }
+  .legend-swatch.diag.down {
+    background-image: linear-gradient(to bottom right, transparent calc(50% - 1px), currentColor calc(50% - 1px), currentColor calc(50% + 1px), transparent calc(50% + 1px)) !important;
+  }
 
   .chart-wrap { position: relative; padding: 16px 12px 8px; }
   #chart { width: 100%; height: 460px; display: block; }
@@ -873,6 +881,8 @@
           <span class="legend-item"><span class="legend-swatch" style="background: var(--ma200);"></span>200일</span>
           <span class="legend-item"><span class="legend-swatch" style="background: var(--bad);"></span>저항</span>
           <span class="legend-item"><span class="legend-swatch" style="background: var(--good);"></span>지지</span>
+          <span class="legend-item" style="color: var(--good);"><span class="legend-swatch diag"></span>↗ 상승추세</span>
+          <span class="legend-item" style="color: var(--bad);"><span class="legend-swatch diag down"></span>↘ 하락추세</span>
         </div>
       </div>
       <div class="chart-wrap">
@@ -1218,55 +1228,121 @@ function findLevels(bars, currentPrice) {
   const range = Math.max(...closes) - Math.min(...closes);
   const tol = range * 0.025;
   const totalBars = bars.length;
-  // 현재가에서 너무 멀면 제외 (위/아래 각 40%)
-  const MAX_DIST_PCT = 0.40;
+  // 현재가에서 너무 멀면 제외 (위/아래 각 50%)
+  const MAX_DIST_PCT = 0.50;
 
-  // 모든 피벗(고+저)을 합쳐서 한 번에 클러스터링 → 현재가 기준으로 분류
-  const allPivots = [...hi, ...lo];
-  const sorted = [...allPivots].sort((a, b) => a.p - b.p);
-  const groups = [];
-  for (const pt of sorted) {
-    const last = groups[groups.length - 1];
-    if (last && Math.abs(pt.p - last.avg) < tol) {
-      last.points.push(pt);
-      last.avg = last.points.reduce((s, x) => s + x.p, 0) / last.points.length;
-    } else {
-      groups.push({ avg: pt.p, points: [pt] });
+  const cluster = (pts) => {
+    const sorted = [...pts].sort((a, b) => a.p - b.p);
+    const groups = [];
+    for (const pt of sorted) {
+      const last = groups[groups.length - 1];
+      if (last && Math.abs(pt.p - last.avg) < tol) {
+        last.points.push(pt);
+        last.avg = last.points.reduce((s, x) => s + x.p, 0) / last.points.length;
+      } else {
+        groups.push({ avg: pt.p, points: [pt] });
+      }
     }
+
+    return groups
+      .filter(g => g.points.length >= 2)
+      .map(g => {
+        const lastIdx = Math.max(...g.points.map(p => p.i));
+        // 최근 가중치: 0.3 (옛날) → 1.0 (최근)
+        const recencyWeight = 0.3 + 0.7 * (lastIdx / Math.max(totalBars - 1, 1));
+        // 거리 가중치: 가까울수록 ↑
+        const distPct = Math.abs(g.avg - currentPrice) / currentPrice;
+        const distWeight = Math.max(0, 1 - distPct * 1.4);
+        return {
+          price: g.avg,
+          touches: g.points.length,
+          lastIdx,
+          score: g.points.length * recencyWeight * Math.max(distWeight, 0.15),
+          distPct
+        };
+      })
+      .filter(g => g.distPct < MAX_DIST_PCT)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 2);
+  };
+
+  return { resistances: cluster(hi), supports: cluster(lo) };
+}
+
+/* ==================== 대각선 추세선 ==================== */
+function findTrendLines(bars) {
+  if (!bars || bars.length < 30) return { up: null, down: null };
+
+  const w = 8;
+  const hi = [], lo = [];
+  for (let i = w; i < bars.length - w; i++) {
+    let isHi = true, isLo = true;
+    for (let j = 1; j <= w && (isHi || isLo); j++) {
+      if (bars[i].h < bars[i - j].h || bars[i].h < bars[i + j].h) isHi = false;
+      if (bars[i].l > bars[i - j].l || bars[i].l > bars[i + j].l) isLo = false;
+    }
+    if (isHi) hi.push({ p: bars[i].h, i });
+    if (isLo) lo.push({ p: bars[i].l, i });
   }
 
-  // 각 클러스터에 점수 매기기
-  const scored = groups
-    .filter(g => g.points.length >= 2)
-    .map(g => {
-      const lastIdx = Math.max(...g.points.map(p => p.i));
-      // 최근일수록 가중치 ↑ (가장 오래된 0.3, 가장 최근 1.0)
-      const recencyWeight = 0.3 + 0.7 * (lastIdx / Math.max(totalBars - 1, 1));
-      // 현재가에서 가까울수록 가중치 ↑
-      const distPct = Math.abs(g.avg - currentPrice) / currentPrice;
-      const distWeight = Math.max(0, 1 - distPct * 1.8);
-      return {
-        price: g.avg,
-        touches: g.points.length,
-        lastIdx,
-        score: g.points.length * recencyWeight * Math.max(distWeight, 0.15),
-        distPct
-      };
-    })
-    // 너무 멀면 컷
-    .filter(g => g.distPct < MAX_DIST_PCT);
+  const N = bars.length;
+  const priceScale = bars[N - 1].c; // tolerance scaling
 
-  // 현재가 기준 분류 + 점수순 정렬 + 상위 2개
-  const resistances = scored
-    .filter(g => g.price > currentPrice)
-    .sort((a, b) => b.score - a.score)
-    .slice(0, 2);
-  const supports = scored
-    .filter(g => g.price < currentPrice)
-    .sort((a, b) => b.score - a.score)
-    .slice(0, 2);
+  // 후보 조합 → 점수 → 베스트
+  function bestLine(pivots, isUp) {
+    if (pivots.length < 2) return null;
+    // 최근 8개 피벗만 후보로 (옛날 끼리 연결되면 무관함)
+    const candidates = pivots.slice(-8);
+    let best = null, bestScore = -Infinity;
 
-  return { resistances, supports };
+    for (let i = 0; i < candidates.length - 1; i++) {
+      for (let j = i + 1; j < candidates.length; j++) {
+        const a = candidates[i], b = candidates[j];
+        // 너무 가까운 두 점은 패스
+        if (b.i - a.i < 8) continue;
+        // 방향 검증 (상승추세는 b.p > a.p, 하락추세는 b.p < a.p)
+        if (isUp && b.p <= a.p) continue;
+        if (!isUp && b.p >= a.p) continue;
+
+        const slope = (b.p - a.p) / (b.i - a.i);
+        const intercept = a.p - slope * a.i;
+        // 너무 가파른 라인은 제외
+        const slopePct = Math.abs(slope) * N / priceScale;
+        if (slopePct > 0.6) continue;
+
+        // 점수: 다른 피벗이 라인 근처/올바른 방향에 있는지
+        const tol = priceScale * 0.015;
+        let touches = 2; // a, b 포함
+        let breaks = 0; // 라인 깨졌는지
+        for (const p of pivots) {
+          if (p === a || p === b) continue;
+          if (p.i < a.i || p.i > b.i) continue; // 두 점 사이 구간만
+          const expectedP = slope * p.i + intercept;
+          const diff = p.p - expectedP;
+          if (Math.abs(diff) < tol) touches++;
+          else if (isUp && diff < -tol * 1.5) breaks++;
+          else if (!isUp && diff > tol * 1.5) breaks++;
+        }
+
+        // 최근일수록 + 깨진 적 적을수록 + 터치 많을수록 ↑
+        const recency = b.i / N;
+        const score = touches * 2 + recency * 5 - breaks * 3;
+
+        if (score > bestScore) {
+          bestScore = score;
+          best = { startI: a.i, startP: a.p, endI: b.i, endP: b.p, slope, intercept, touches };
+        }
+      }
+    }
+    // 최소 점수 미만이면 그리지 않음 (잘 안 맞으면 차라리 안 그림)
+    if (bestScore < 4) return null;
+    return best;
+  }
+
+  return {
+    up: bestLine(lo, true),
+    down: bestLine(hi, false)
+  };
 }
 
 /* ==================== 포맷 ==================== */
@@ -1291,7 +1367,7 @@ function fmtPct(n) {
 }
 
 /* ==================== 차트 ==================== */
-function drawChart(bars, ma50Vis, ma200Vis, levels, currentPrice, rangeMonths) {
+function drawChart(bars, ma50Vis, ma200Vis, levels, trendLines, currentPrice, rangeMonths) {
   const svg = $("chart");
   const W = 1200, H = 460;
   const padL = 14, padR = 100, padT = 28, padB = 38;
@@ -1362,6 +1438,37 @@ function drawChart(bars, ma50Vis, ma200Vis, levels, currentPrice, rangeMonths) {
   // 가격 라인
   const closeLine = bars.map((b, i) => `${xOf(i)},${yOf(b.c)}`).join(" ");
   s += `<polyline points="${closeLine}" fill="none" stroke="#1d2230" stroke-width="2.4" stroke-linejoin="round"/>`;
+
+  // 대각선 추세선 (Dynamic Levels)
+  const drawTrend = (line, color, label) => {
+    if (!line) return "";
+    const x1 = xOf(line.startI), y1 = yOf(line.startP);
+    const x2 = xOf(line.endI), y2 = yOf(line.endP);
+    // 끝점에서 우측까지 점선 연장
+    const lastI = bars.length - 1;
+    const projP = line.slope * lastI + line.intercept;
+    const xExt = xOf(lastI), yExt = yOf(projP);
+    let out = "";
+    // 본 라인 (실선)
+    out += `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="${color}" stroke-width="2.2" stroke-linecap="round" opacity="0.85"/>`;
+    // 연장선 (점선)
+    if (xExt > x2 + 4) {
+      out += `<line x1="${x2.toFixed(1)}" y1="${y2.toFixed(1)}" x2="${xExt.toFixed(1)}" y2="${yExt.toFixed(1)}" stroke="${color}" stroke-width="2" stroke-dasharray="4 4" opacity="0.55"/>`;
+    }
+    // 시작/끝 점에 작은 동그라미 마커
+    out += `<circle cx="${x1.toFixed(1)}" cy="${y1.toFixed(1)}" r="3.5" fill="white" stroke="${color}" stroke-width="2"/>`;
+    out += `<circle cx="${x2.toFixed(1)}" cy="${y2.toFixed(1)}" r="3.5" fill="white" stroke="${color}" stroke-width="2"/>`;
+    // 라벨 (끝점 근처)
+    if (label && xExt > x2 + 4) {
+      const labelY = yExt + (label.includes('상승') ? 18 : -8);
+      out += `<text x="${(xExt - 4).toFixed(1)}" y="${labelY.toFixed(1)}" font-family="Caveat" font-weight="700" font-size="16" fill="${color}" text-anchor="end">${label}</text>`;
+    }
+    return out;
+  };
+  if (trendLines) {
+    s += drawTrend(trendLines.up, "#2d8659", "↗ 상승 추세선");
+    s += drawTrend(trendLines.down, "#d94626", "↘ 하락 추세선");
+  }
 
   // 라벨 위치 (가격 핀): 차트 우측 거터에 위치
   const pillX = W - padR + 4;
@@ -1702,8 +1809,10 @@ function applyRange(rangeMonths) {
 
   // 레벨은 보이는 범위에서만, 현재가 기준으로 분류
   const levels = findLevels(visibleBars, currentPrice);
+  // 대각선 추세선 (보이는 범위에서)
+  const trendLines = findTrendLines(visibleBars);
 
-  drawChart(visibleBars, visibleMa50, visibleMa200, levels, currentPrice, rangeMonths);
+  drawChart(visibleBars, visibleMa50, visibleMa200, levels, trendLines, currentPrice, rangeMonths);
   renderVerdict(buildVerdict({ ma50Last, ma200Last, rsiLast, currentPrice }));
   renderVitals(buildVitals({ ma50Last, ma200Last, rsiLast, currentPrice, fullCloses: state.fullCloses }));
   renderLevels(levels, currentPrice, state.data.currency);
