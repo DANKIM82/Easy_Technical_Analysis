@@ -1419,8 +1419,12 @@ function fmtPct(n) {
 function drawChart(bars, ma50Vis, ma200Vis, levels, trendLines, currentPrice, rangeMonths) {
   const svg = $("chart");
   const W = 1200, H = 460;
-  const padL = 14, padR = 100, padT = 28, padB = 38;
+  const padL = 14, padR = 100, padT = 28, padB = 50;
   const cw = W - padL - padR, ch = H - padT - padB;
+
+  // 미래 영역: 과거 길이의 ~20%, 최소 30바, 최대 120바 (~6개월)
+  const futureBars = Math.min(120, Math.max(30, Math.floor(bars.length * 0.20)));
+  const totalSpan = bars.length + futureBars;
 
   const closes = bars.map(b => b.c);
   const lows = bars.map(b => b.l);
@@ -1429,8 +1433,10 @@ function drawChart(bars, ma50Vis, ma200Vis, levels, trendLines, currentPrice, ra
   const minP = Math.min(...lows, ...allLevels) * 0.985;
   const maxP = Math.max(...highs, ...allLevels) * 1.015;
 
-  const xOf = (i) => padL + (i / (bars.length - 1)) * cw;
+  const xOf = (i) => padL + (i / (totalSpan - 1)) * cw;
   const yOf = (p) => padT + (1 - (p - minP) / (maxP - minP)) * ch;
+
+  const todayX = xOf(bars.length - 1);
 
   // 라벨이 들어갈 Y 위치 미리 계산 (겹침 방지용) — 보이는 것만
   const reservedYs = [
@@ -1440,6 +1446,9 @@ function drawChart(bars, ma50Vis, ma200Vis, levels, trendLines, currentPrice, ra
   ];
 
   let s = "";
+
+  // 미래 영역 배경 (살짝 따뜻한 톤)
+  s += `<rect x="${todayX}" y="${padT}" width="${(W - padR - todayX).toFixed(1)}" height="${ch}" fill="rgba(217, 136, 26, 0.05)" />`;
 
   // 가로 격자 + Y축 라벨 (단순화: 4개만, 가격 라벨과 겹치면 숨김)
   const yTicks = 3;
@@ -1456,25 +1465,43 @@ function drawChart(bars, ma50Vis, ma200Vis, levels, trendLines, currentPrice, ra
 
   // 월/년 라벨 (시계열 길이에 따라 간격 조정)
   const monthInterval = rangeMonths <= 12 ? 1 : rangeMonths <= 24 ? 3 : 6;
-  const showYear = rangeMonths >= 24;
+  // 과거 영역 라벨
   let lastM = -1, lastY = -1;
   bars.forEach((b, i) => {
     const m = b.t.getMonth(), y = b.t.getFullYear();
     if (m !== lastM && m % monthInterval === 0) {
       const x = xOf(i);
       s += `<line x1="${x}" x2="${x}" y1="${padT}" y2="${H - padB}" stroke="rgba(29,34,48,0.04)"/>`;
-      const label = showYear && (y !== lastY)
-        ? `${String(y).slice(2)}.${m + 1}월`
-        : `${m + 1}월`;
-      s += `<text x="${x}" y="${H - padB + 18}" font-size="10" fill="#8a91a3" text-anchor="middle">${label}</text>`;
+      s += `<text x="${x}" y="${H - padB + 16}" font-size="10" fill="#8a91a3" text-anchor="middle">${m + 1}월</text>`;
+      // 연도 변경 시 (또는 첫 라벨) 연도 표시
+      if (y !== lastY) {
+        s += `<text x="${x}" y="${H - padB + 30}" font-size="9.5" fill="#1d2230" text-anchor="middle" font-weight="700">${y}</text>`;
+      }
       lastM = m;
       lastY = y;
     }
   });
+  // 미래 영역 라벨 (추정 날짜)
+  const lastBarDate = bars[bars.length - 1].t;
+  const msPerTradingDay = 1.45 * 86400000;
+  for (let f = 1; f <= futureBars; f++) {
+    const fDate = new Date(lastBarDate.getTime() + f * msPerTradingDay);
+    const m = fDate.getMonth(), y = fDate.getFullYear();
+    if (m !== lastM && m % monthInterval === 0) {
+      const x = xOf(bars.length - 1 + f);
+      s += `<line x1="${x}" x2="${x}" y1="${padT}" y2="${H - padB}" stroke="rgba(29,34,48,0.04)"/>`;
+      s += `<text x="${x}" y="${H - padB + 16}" font-size="10" fill="#8a91a3" text-anchor="middle" opacity="0.6">${m + 1}월</text>`;
+      if (y !== lastY) {
+        s += `<text x="${x}" y="${H - padB + 30}" font-size="9.5" fill="#1d2230" text-anchor="middle" font-weight="700" opacity="0.6">${y}</text>`;
+      }
+      lastM = m;
+      lastY = y;
+    }
+  }
 
-  // 영역 채움
+  // 영역 채움 (과거만)
   const areaPts = bars.map((b, i) => `${xOf(i)},${yOf(b.c)}`).join(" ");
-  s += `<polygon points="${padL},${H - padB} ${areaPts} ${W - padR},${H - padB}" fill="rgba(29,34,48,0.04)"/>`;
+  s += `<polygon points="${padL},${H - padB} ${areaPts} ${todayX.toFixed(1)},${H - padB}" fill="rgba(29,34,48,0.04)"/>`;
 
   // 이동평균
   const drawMA = (data, color, dash, width) => {
@@ -1488,34 +1515,51 @@ function drawChart(bars, ma50Vis, ma200Vis, levels, trendLines, currentPrice, ra
   const closeLine = bars.map((b, i) => `${xOf(i)},${yOf(b.c)}`).join(" ");
   s += `<polyline points="${closeLine}" fill="none" stroke="#1d2230" stroke-width="2.4" stroke-linejoin="round"/>`;
 
-  // 대각선 추세선 (Dynamic Levels)
+  // 대각선 추세선 (Dynamic Levels) — 미래까지 연장
   const drawTrend = (line, color, label) => {
     if (!line) return "";
     const x1 = xOf(line.startI), y1 = yOf(line.startP);
     const x2 = xOf(line.endI), y2 = yOf(line.endP);
-    // 끝점에서 우측까지 점선 연장
-    const lastI = bars.length - 1;
-    const projP = line.slope * lastI + line.intercept;
-    const xExt = xOf(lastI), yExt = yOf(projP);
+    // 미래 끝까지 연장
+    const futI = bars.length - 1 + futureBars;
+    const projP = line.slope * futI + line.intercept;
+    const xExt = xOf(futI), yExt = yOf(projP);
+    // 라인이 차트 영역 밖으로 너무 벗어나는지 체크 (Y 범위 ±20%)
+    const yMargin = ch * 0.2;
+    const yExtClamped = Math.max(padT - yMargin, Math.min(H - padB + yMargin, yExt));
     let out = "";
     // 본 라인 (실선)
     out += `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="${color}" stroke-width="2.2" stroke-linecap="round" opacity="0.85"/>`;
-    // 연장선 (점선)
+    // 연장선 (점선) — 두 번째 점부터 미래 끝까지
     if (xExt > x2 + 4) {
-      out += `<line x1="${x2.toFixed(1)}" y1="${y2.toFixed(1)}" x2="${xExt.toFixed(1)}" y2="${yExt.toFixed(1)}" stroke="${color}" stroke-width="2" stroke-dasharray="4 4" opacity="0.55"/>`;
+      out += `<line x1="${x2.toFixed(1)}" y1="${y2.toFixed(1)}" x2="${xExt.toFixed(1)}" y2="${yExtClamped.toFixed(1)}" stroke="${color}" stroke-width="2" stroke-dasharray="4 4" opacity="0.55"/>`;
     }
     // 시작/끝 점에 작은 동그라미 마커
     out += `<circle cx="${x1.toFixed(1)}" cy="${y1.toFixed(1)}" r="3.5" fill="white" stroke="${color}" stroke-width="2"/>`;
     out += `<circle cx="${x2.toFixed(1)}" cy="${y2.toFixed(1)}" r="3.5" fill="white" stroke="${color}" stroke-width="2"/>`;
-    // 라벨 (끝점 근처)
+    // 라벨 (연장선 끝 근처) — 미래 영역 안에
     if (label && xExt > x2 + 4) {
-      const labelY = yExt + (label.includes('상승') ? 18 : -8);
+      const labelY = yExtClamped + (label.includes('상승') ? 18 : -8);
       out += `<text x="${(xExt - 4).toFixed(1)}" y="${labelY.toFixed(1)}" font-family="Caveat" font-weight="700" font-size="16" fill="${color}" text-anchor="end">${label}</text>`;
     }
     return out;
   };
   if (trendLines && chartFeatures.uptrend) s += drawTrend(trendLines.up, "#2d8659", "↗ 상승 추세선");
   if (trendLines && chartFeatures.downtrend) s += drawTrend(trendLines.down, "#d94626", "↘ 하락 추세선");
+
+  // 오늘 세로 구분선 + 라벨
+  s += `<line x1="${todayX.toFixed(1)}" x2="${todayX.toFixed(1)}" y1="${padT}" y2="${H - padB}" stroke="#1d2230" stroke-width="1.5" stroke-dasharray="4 3" opacity="0.45"/>`;
+
+  // +3M, +6M 마커 (미래 영역에)
+  const barsPerMonth = bars.length / rangeMonths;
+  [3, 6].forEach(months => {
+    const barOffset = Math.floor(months * barsPerMonth);
+    if (barOffset > futureBars) return;
+    const projI = bars.length - 1 + barOffset;
+    const x = xOf(projI);
+    s += `<line x1="${x.toFixed(1)}" x2="${x.toFixed(1)}" y1="${padT + 4}" y2="${H - padB}" stroke="#8a91a3" stroke-width="1" stroke-dasharray="2 4" opacity="0.4"/>`;
+    s += `<text x="${x.toFixed(1)}" y="${(padT - 6).toFixed(1)}" font-family="JetBrains Mono" font-size="10" font-weight="700" fill="#8a91a3" text-anchor="middle">+${months}M</text>`;
+  });
 
   // 라벨 위치 (가격 핀): 차트 우측 거터에 위치
   const pillX = W - padR + 4;
@@ -1572,7 +1616,9 @@ function drawChart(bars, ma50Vis, ma200Vis, levels, trendLines, currentPrice, ra
     <text x="${pillTextX}" y="${ly + 6}" font-size="13" fill="white" text-anchor="middle" font-weight="800">${fmtPriceLabel(currentPrice)}</text>
   </g>`;
 
-  s += `<rect id="hover-zone" x="${padL}" y="${padT}" width="${cw}" height="${ch}" fill="transparent" cursor="crosshair"/>`;
+  // 호버 영역은 과거 데이터까지만 (오늘 세로선까지)
+  const hoverWidth = todayX - padL;
+  s += `<rect id="hover-zone" x="${padL}" y="${padT}" width="${hoverWidth.toFixed(1)}" height="${ch}" fill="transparent" cursor="crosshair"/>`;
   s += `<line id="hover-line" x1="0" x2="0" y1="${padT}" y2="${H - padB}" stroke="#1d2230" stroke-width="1" stroke-dasharray="3 3" opacity="0" pointer-events="none"/>`;
 
   svg.innerHTML = s;
@@ -1583,7 +1629,8 @@ function drawChart(bars, ma50Vis, ma200Vis, levels, trendLines, currentPrice, ra
   zone.addEventListener("mousemove", (e) => {
     const rect = svg.getBoundingClientRect();
     const x = (e.clientX - rect.left) * (W / rect.width);
-    const i = Math.max(0, Math.min(bars.length - 1, Math.round((x - padL) / cw * (bars.length - 1))));
+    // 마우스 X → 바 인덱스 (과거 영역 매핑)
+    const i = Math.max(0, Math.min(bars.length - 1, Math.round((x - padL) / hoverWidth * (bars.length - 1))));
     const b = bars[i];
     line.setAttribute("x1", xOf(i));
     line.setAttribute("x2", xOf(i));
