@@ -614,6 +614,49 @@
   }
   .legend-modern strong { color: var(--bad); }
 
+  /* 레슨 → 케이스 역방향 링크 */
+  .case-links {
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 2px dashed var(--ink-faded);
+    display: flex; flex-wrap: wrap; gap: 8px 14px;
+    align-items: center;
+  }
+  .case-links .label {
+    font-family: 'Caveat', cursive;
+    font-weight: 700;
+    font-size: 18px;
+    color: var(--ink-soft);
+  }
+  .case-link {
+    display: inline-flex; align-items: center; gap: 5px;
+    background: var(--card);
+    border: 2px solid var(--ink);
+    border-radius: 999px;
+    padding: 5px 12px;
+    text-decoration: none;
+    color: var(--ink);
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    font-size: 13px;
+    box-shadow: 2px 2px 0 var(--ink);
+    transition: all 0.15s ease;
+  }
+  .case-link:hover {
+    transform: translate(-1px, -1px);
+    box-shadow: 3px 3px 0 var(--ink);
+    background: var(--bg-deep);
+  }
+  .case-link .flag { font-size: 14px; }
+  .case-link .pct {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--ink-soft);
+  }
+  .case-link .pct.good { color: var(--good); }
+  .case-link .pct.bad { color: var(--bad); }
+  .case-link .pct.warn { color: var(--warm); }
+
   @media (max-width: 720px) {
     .legend { grid-template-columns: 56px 1fr; gap: 12px; padding: 18px; }
     .legend-mono { width: 56px; height: 56px; font-size: 20px; }
@@ -667,6 +710,11 @@
       </div>
       <p>이게 <strong>상승 추세선</strong>이에요. 가격이 이 선 위에 머무는 동안은 추세가 살아있어요. 깨지면? 추세 변화 신호.</p>
       <div class="callout">💡 진료소에선 — '추세 (Trend)' 활력 징후가 자동 판단해줘요</div>
+      <div class="case-links">
+        <span class="label">📚 실전 사례:</span>
+        <a href="#case-nvda" class="case-link"><span class="flag">🇺🇸</span> 엔비디아 <span class="pct good">+240%</span></a>
+        <a href="#case-tsla" class="case-link"><span class="flag">🇺🇸</span> 테슬라 <span class="pct warn">+700%</span></a>
+      </div>
     </div>
   </div>
 
@@ -686,6 +734,11 @@
       </div>
       <p>이게 <strong>하락 추세선</strong>이에요. 가격이 이 선 아래에 있는 동안은 추세가 살아있어요. 위로 뚫으면 추세 전환 후보.</p>
       <div class="callout">💡 진료소에선 — 빨간 톤의 평결 (🐻 약세, 🥶 너무 차가움)으로 표시</div>
+      <div class="case-links">
+        <span class="label">📚 실전 사례:</span>
+        <a href="#case-kakao" class="case-link"><span class="flag">🇰🇷</span> 카카오 <span class="pct bad">-69%</span></a>
+        <a href="#case-meta" class="case-link"><span class="flag">🇺🇸</span> 메타 <span class="pct bad">-73%</span></a>
+      </div>
     </div>
   </div>
 
@@ -705,6 +758,10 @@
       </div>
       <p>이 가격대에서 <strong>여러 번 튕긴다</strong>는 건, 사람들이 '여기서 사고싶다' 생각하는 가격이라는 뜻이에요. 깨지면? 추가 하락 위험 ↓</p>
       <div class="callout">💡 진료소에선 — '🛟 지지선' 박스에 별점과 함께 자동 표시</div>
+      <div class="case-links">
+        <span class="label">📚 실전 사례:</span>
+        <a href="#case-samsung" class="case-link"><span class="flag">🇰🇷</span> 삼성전자 <span class="pct warn">박스권</span></a>
+      </div>
     </div>
   </div>
 
@@ -724,6 +781,11 @@
       </div>
       <p>이 가격대에서 <strong>여러 번 막혔다</strong>는 건, 거기서 파는 사람이 많다는 뜻. 뚫으면? 강한 매수 신호 ↑</p>
       <div class="callout">💡 진료소에선 — '🚧 저항선' 박스에서 가까운 천장 3개를 알려줘요</div>
+      <div class="case-links">
+        <span class="label">📚 실전 사례:</span>
+        <a href="#case-kakao" class="case-link"><span class="flag">🇰🇷</span> 카카오 <span class="pct bad">-69%</span></a>
+        <a href="#case-samsung" class="case-link"><span class="flag">🇰🇷</span> 삼성전자 <span class="pct warn">박스권</span></a>
+      </div>
     </div>
   </div>
 
@@ -746,6 +808,11 @@
       </div>
       <p>평균 일수가 <strong>길수록</strong> 부드러워지죠? 짧으면 민감하고, 길면 둔하지만 추세를 잘 보여줘요. 보통 <strong>50일선</strong>(단기)과 <strong>200일선</strong>(장기)을 같이 봐요.</p>
       <div class="callout">💡 진료소에선 — 50일선(주황)과 200일선(회색)이 차트에 자동으로 그려져요</div>
+      <div class="case-links">
+        <span class="label">📚 실전 사례:</span>
+        <a href="#case-nvda" class="case-link"><span class="flag">🇺🇸</span> 엔비디아 <span class="pct good">+240%</span></a>
+        <a href="#case-meta" class="case-link"><span class="flag">🇺🇸</span> 메타 <span class="pct bad">-73%</span></a>
+      </div>
     </div>
   </div>
 
@@ -777,6 +844,10 @@
       </div>
       <p><strong>70 이상</strong>은 너무 뜨거워서 한 번 식을 자리, <strong>30 이하</strong>는 너무 식어서 한 번 데워질 자리. 강한 추세에선 70 위에 오래 있을 수도 있으니 만능은 아니에요.</p>
       <div class="callout">💡 진료소에선 — 'RSI 14일' 활력 징후가 자동으로 체온 측정</div>
+      <div class="case-links">
+        <span class="label">📚 과열 사례:</span>
+        <a href="#case-tsla" class="case-link"><span class="flag">🇺🇸</span> 테슬라 2020 <span class="pct warn">+700%</span></a>
+      </div>
     </div>
   </div>
 
