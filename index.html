@@ -230,6 +230,143 @@
   .chip:hover { background: var(--ink); color: var(--bg-deep); transform: translateY(-2px); }
   .chip .emoji { margin-right: 4px; }
 
+  /* ⭐ 관심종목 */
+  .watchlist-wrap {
+    max-width: 1180px;
+    margin: 0 auto 8px;
+    padding: 0 4px;
+  }
+  .watchlist-head {
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 12px;
+  }
+  .watchlist-head .title {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 800;
+    font-size: 16px;
+    color: var(--ink);
+    letter-spacing: -0.01em;
+  }
+  .watchlist-head .count {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--ink-soft);
+    background: var(--bg-deep);
+    padding: 2px 9px;
+    border-radius: 999px;
+    border: 1.5px solid var(--ink);
+  }
+  .watchlist-head .empty-hint {
+    font-family: 'Caveat', cursive;
+    font-weight: 600;
+    font-size: 17px;
+    color: var(--ink-faded);
+  }
+  .watchlist-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 10px;
+  }
+  .wl-card {
+    position: relative;
+    background: var(--card);
+    border: 2px solid var(--ink);
+    border-radius: 14px;
+    padding: 12px 14px;
+    box-shadow: 3px 3px 0 var(--ink);
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    text-align: left;
+  }
+  .wl-card:hover {
+    transform: translate(-2px, -2px);
+    box-shadow: 5px 5px 0 var(--ink);
+    background: var(--bg-deep);
+  }
+  .wl-card .wl-top {
+    display: flex; align-items: center; gap: 6px;
+  }
+  .wl-card .wl-emoji { font-size: 20px; line-height: 1; }
+  .wl-card .wl-name {
+    font-family: 'Gowun Dodum', sans-serif;
+    font-weight: 700;
+    font-size: 14px;
+    color: var(--ink);
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .wl-card .wl-ticker {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10.5px;
+    color: var(--ink-soft);
+    letter-spacing: 0.02em;
+  }
+  .wl-card .wl-remove {
+    position: absolute;
+    top: -8px; right: -8px;
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    background: var(--bad);
+    color: white;
+    border: 2px solid var(--ink);
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 800;
+    font-size: 13px;
+    line-height: 1;
+    display: none;
+    align-items: center; justify-content: center;
+    cursor: pointer;
+    box-shadow: 1px 1px 0 var(--ink);
+    padding: 0;
+  }
+  .wl-card:hover .wl-remove { display: flex; }
+  .wl-card .wl-remove:hover { transform: scale(1.15) rotate(90deg); }
+
+  /* ⭐ 별 토글 (진단 헤더) */
+  .star-toggle {
+    background: var(--card);
+    border: 2.5px solid var(--ink);
+    border-radius: 999px;
+    padding: 8px 16px;
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    font-size: 13px;
+    color: var(--ink);
+    cursor: pointer;
+    box-shadow: 3px 3px 0 var(--ink);
+    transition: all 0.15s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+    margin-left: 12px;
+  }
+  .star-toggle:hover {
+    transform: translate(-2px, -2px);
+    box-shadow: 5px 5px 0 var(--ink);
+  }
+  .star-toggle.saved {
+    background: var(--warm);
+    color: white;
+  }
+  .star-toggle .star { font-size: 16px; line-height: 1; }
+  .star-toggle.saved .star { animation: star-pop 0.4s ease; }
+  @keyframes star-pop {
+    0% { transform: scale(1); }
+    40% { transform: scale(1.4) rotate(-15deg); }
+    100% { transform: scale(1); }
+  }
+
+  @media (max-width: 720px) {
+    .watchlist-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; }
+    .star-toggle { padding: 6px 12px; font-size: 12px; margin-left: 8px; }
+  }
+
   .browse-link {
     background: none; border: none; cursor: pointer;
     font-family: 'Caveat', cursive; font-weight: 600;
@@ -354,8 +491,16 @@
   .diagnosis-header {
     padding: 24px 28px; background: var(--bg-deep);
     border-bottom: 2.5px dashed var(--ink);
-    display: grid; grid-template-columns: auto 1fr auto;
+    display: grid; grid-template-columns: auto 1fr auto auto;
     gap: 20px; align-items: center;
+  }
+  @media (max-width: 720px) {
+    .diagnosis-header {
+      grid-template-columns: auto 1fr;
+      gap: 12px 16px;
+    }
+    .diagnosis-header .price-block { text-align: left; grid-column: 2; }
+    .diagnosis-header .star-toggle { grid-column: 1 / -1; justify-self: start; margin-left: 0; }
   }
   .diagnosis-header .stamp {
     font-family: 'Caveat', cursive; font-weight: 700; font-size: 16px;
@@ -643,6 +788,14 @@
     <div class="pulse"><span class="dot"></span>OPEN · 24/7</div>
   </div>
 
+  <div class="watchlist-wrap" id="watchlist-wrap" style="display:none;">
+    <div class="watchlist-head">
+      <span class="title">⭐ 내 관심종목</span>
+      <span class="count" id="watchlist-count">0</span>
+    </div>
+    <div class="watchlist-grid" id="watchlist-grid"></div>
+  </div>
+
   <div class="hero">
     <div class="doctor-badge">✋ 잠깐, 차트 좀 봐드릴게요</div>
     <h1>차트가 무서운<br/><span class="accent">분석가</span>를 위한.</h1>
@@ -692,6 +845,9 @@
           <div class="price" id="current-price">—</div>
           <div class="change" id="price-change">—</div>
         </div>
+        <button class="star-toggle" id="star-toggle" type="button">
+          <span class="star">☆</span><span id="star-label">관심종목 추가</span>
+        </button>
       </div>
       <div class="diagnosis-body">
         <div class="mood-emoji" id="mood-emoji">🤔</div>
@@ -1390,6 +1546,7 @@ function renderHeader(data, currentPrice, prevClose) {
   ce.className = `change ${change >= 0 ? "up" : "down"}`;
   const today = new Date();
   $("diagnosis-date").textContent = `진료일자 · ${today.getMonth() + 1}/${today.getDate()}`;
+  syncStarToggle(data.ticker);
 }
 
 function renderVerdict(v) {
@@ -1675,9 +1832,114 @@ document.querySelectorAll(".range-btn").forEach(btn => {
   });
 });
 
+/* ==================== ⭐ 관심종목 (localStorage) ==================== */
+const WL_KEY = 'clinic_watchlist_v1';
+
+function wlLoad() {
+  try {
+    const raw = localStorage.getItem(WL_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch { return []; }
+}
+
+function wlSave(list) {
+  try { localStorage.setItem(WL_KEY, JSON.stringify(list)); } catch {}
+}
+
+function wlHas(ticker) {
+  return wlLoad().some(s => s.t === ticker);
+}
+
+function wlAdd(ticker) {
+  if (!ticker) return;
+  const t = ticker.toUpperCase();
+  if (wlHas(t)) return;
+  const meta = STOCKS.find(s => s.t === t);
+  const entry = meta
+    ? { t: meta.t, n: meta.n, em: meta.em }
+    : { t: t, n: t, em: '📊' };
+  const list = wlLoad();
+  list.push(entry);
+  wlSave(list);
+  renderWatchlist();
+}
+
+function wlRemove(ticker) {
+  const list = wlLoad().filter(s => s.t !== ticker);
+  wlSave(list);
+  renderWatchlist();
+}
+
+function renderWatchlist() {
+  const list = wlLoad();
+  const wrap = $("watchlist-wrap");
+  const grid = $("watchlist-grid");
+  const countEl = $("watchlist-count");
+  if (list.length === 0) {
+    wrap.style.display = 'none';
+    return;
+  }
+  wrap.style.display = 'block';
+  countEl.textContent = list.length;
+  grid.innerHTML = list.map(s => `
+    <button class="wl-card" data-ticker="${s.t}" type="button" title="${s.n} 진료받기">
+      <span class="wl-remove" data-remove="${s.t}" title="제거">×</span>
+      <div class="wl-top">
+        <span class="wl-emoji">${s.em || '📊'}</span>
+        <span class="wl-name">${s.n}</span>
+      </div>
+      <div class="wl-ticker">${s.t}</div>
+    </button>
+  `).join('');
+
+  // 카드 클릭 → 진료, 제거 버튼 클릭 → 제거
+  grid.querySelectorAll('.wl-card').forEach(card => {
+    card.addEventListener('click', (e) => {
+      // 제거 버튼이면 카드 클릭 무시
+      if (e.target.closest('.wl-remove')) {
+        e.stopPropagation();
+        const ticker = e.target.closest('.wl-remove').dataset.remove;
+        wlRemove(ticker);
+        // 현재 화면에 떠있는 종목이면 별 토글도 동기화
+        if (state.symbol === ticker) syncStarToggle(ticker);
+        return;
+      }
+      const ticker = card.dataset.ticker;
+      $("ticker").value = ticker;
+      analyze(ticker);
+    });
+  });
+}
+
+function syncStarToggle(ticker) {
+  const btn = $("star-toggle");
+  const label = $("star-label");
+  const star = btn.querySelector('.star');
+  if (wlHas(ticker)) {
+    btn.classList.add('saved');
+    star.textContent = '★';
+    label.textContent = '관심종목 ✓';
+  } else {
+    btn.classList.remove('saved');
+    star.textContent = '☆';
+    label.textContent = '관심종목 추가';
+  }
+}
+
+$("star-toggle").addEventListener('click', () => {
+  if (!state.symbol) return;
+  if (wlHas(state.symbol)) {
+    wlRemove(state.symbol);
+  } else {
+    wlAdd(state.symbol);
+  }
+  syncStarToggle(state.symbol);
+});
+
 /* ==================== 초기 로드 ==================== */
 window.addEventListener("DOMContentLoaded", () => {
   renderPopularChips();
+  renderWatchlist();
   $("ticker").value = "AAPL";
   analyze("AAPL");
 });
