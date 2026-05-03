@@ -628,8 +628,10 @@
   }
 
   .chart-wrap { position: relative; padding: 16px 12px 8px; }
-  #chart { width: 100%; height: 460px; display: block; }
+  #chart { width: 100%; height: 460px; display: block; cursor: crosshair; }
   #chart text { font-family: 'JetBrains Mono', monospace; }
+  #chart .draggable-annot { cursor: grab; }
+  #chart .draggable-annot:active { cursor: grabbing; }
   .annotation { font-family: 'Caveat', cursive; font-weight: 600; }
 
   .hover-tip {
@@ -1438,6 +1440,13 @@ function drawChart(bars, ma50Vis, ma200Vis, levels, trendLines, currentPrice, ra
   const yOf = (p) => padT + (1 - (p - minP) / (maxP - minP)) * ch;
 
   const todayX = xOf(bars.length - 1);
+  const hoverWidth = todayX - padL;
+
+  // 주석 wrapping 헬퍼 (드래그 가능)
+  const wrapAnnot = (id, content) => {
+    const o = annotOffsets[id] || { dx: 0, dy: 0 };
+    return `<g class="draggable-annot" data-annot-id="${id}" transform="translate(${o.dx}, ${o.dy})">${content}</g>`;
+  };
 
   // 라벨이 들어갈 Y 위치 미리 계산 (겹침 방지용) — 보이는 것만
   const reservedYs = [
@@ -1541,7 +1550,8 @@ function drawChart(bars, ma50Vis, ma200Vis, levels, trendLines, currentPrice, ra
     // 라벨 (연장선 끝 근처) — 미래 영역 안에
     if (label && xExt > x2 + 4 && chartFeatures.annotations) {
       const labelY = yExtClamped + (label.includes('상승') ? 18 : -8);
-      out += `<text x="${(xExt - 4).toFixed(1)}" y="${labelY.toFixed(1)}" font-family="Caveat" font-weight="700" font-size="16" fill="${color}" text-anchor="end">${label}</text>`;
+      const id = label.includes('상승') ? 'uptrend-label' : 'downtrend-label';
+      out += wrapAnnot(id, `<text x="${(xExt - 4).toFixed(1)}" y="${labelY.toFixed(1)}" font-family="Caveat" font-weight="700" font-size="16" fill="${color}" text-anchor="end">${label}</text>`);
     }
     return out;
   };
@@ -1576,7 +1586,7 @@ function drawChart(bars, ma50Vis, ma200Vis, levels, trendLines, currentPrice, ra
       <text x="${pillTextX}" y="${y + 5}" font-size="12" fill="white" text-anchor="middle" font-weight="700">${fmtPriceLabel(lv.price)}</text></g>`;
     if (idx === 0 && chartFeatures.annotations) {
       // 화살표 ↓ (천장 막혀서 다시 떨어짐)
-      s += `<text x="${padL + 16}" y="${y - 8}" class="annotation" font-size="20" fill="#d94626">↓ 자꾸 여기서 막혀요!</text>`;
+      s += wrapAnnot('resistance-text', `<text x="${padL + 16}" y="${y - 8}" class="annotation" font-size="20" fill="#d94626">↓ 자꾸 여기서 막혀요!</text>`);
     }
   });
 
@@ -1589,7 +1599,7 @@ function drawChart(bars, ma50Vis, ma200Vis, levels, trendLines, currentPrice, ra
       <text x="${pillTextX}" y="${y + 5}" font-size="12" fill="white" text-anchor="middle" font-weight="700">${fmtPriceLabel(lv.price)}</text></g>`;
     if (idx === 0 && chartFeatures.annotations) {
       // 화살표 ↑ (바닥 튕겨서 다시 올라감)
-      s += `<text x="${padL + 16}" y="${y + 24}" class="annotation" font-size="20" fill="#2d8659">↑ 자꾸 여기서 튕겨요!</text>`;
+      s += wrapAnnot('support-text', `<text x="${padL + 16}" y="${y + 24}" class="annotation" font-size="20" fill="#2d8659">↑ 자꾸 여기서 튕겨요!</text>`);
     }
   });
 
@@ -1605,11 +1615,11 @@ function drawChart(bars, ma50Vis, ma200Vis, levels, trendLines, currentPrice, ra
   const bubbleX = lx - bubbleW - 10;
   const bubbleY = ly - 38;
   if (bubbleX > padL + 20 && chartFeatures.annotations) {
-    s += `<g>
+    s += wrapAnnot('now-here', `
       <rect x="${bubbleX}" y="${bubbleY}" width="${bubbleW}" height="${bubbleH}" rx="5" fill="#1d2230"/>
       <path d="M ${bubbleX + bubbleW - 4} ${bubbleY + bubbleH} L ${lx - 4} ${ly - 13} L ${bubbleX + bubbleW - 18} ${bubbleY + bubbleH} z" fill="#1d2230"/>
       <text x="${bubbleX + bubbleW / 2}" y="${bubbleY + 15}" font-size="12" fill="white" text-anchor="middle" font-weight="700">지금 여기!</text>
-    </g>`;
+    `);
   }
   // 현재가 라벨 (잉크색 핀, 우측, 다른 라벨 위에 우선 노출)
   s += `<g>
@@ -1617,35 +1627,19 @@ function drawChart(bars, ma50Vis, ma200Vis, levels, trendLines, currentPrice, ra
     <text x="${pillTextX}" y="${ly + 6}" font-size="13" fill="white" text-anchor="middle" font-weight="800">${fmtPriceLabel(currentPrice)}</text>
   </g>`;
 
-  // 호버 영역은 과거 데이터까지만 (오늘 세로선까지)
-  const hoverWidth = todayX - padL;
-  s += `<rect id="hover-zone" x="${padL}" y="${padT}" width="${hoverWidth.toFixed(1)}" height="${ch}" fill="transparent" cursor="crosshair"/>`;
   s += `<line id="hover-line" x1="0" x2="0" y1="${padT}" y2="${H - padB}" stroke="#1d2230" stroke-width="1" stroke-dasharray="3 3" opacity="0" pointer-events="none"/>`;
 
   svg.innerHTML = s;
 
-  const zone = document.getElementById("hover-zone");
-  const line = document.getElementById("hover-line");
-  const tip = $("hover-tip");
-  zone.addEventListener("mousemove", (e) => {
-    const rect = svg.getBoundingClientRect();
-    const x = (e.clientX - rect.left) * (W / rect.width);
-    // 마우스 X → 바 인덱스 (과거 영역 매핑)
-    const i = Math.max(0, Math.min(bars.length - 1, Math.round((x - padL) / hoverWidth * (bars.length - 1))));
-    const b = bars[i];
-    line.setAttribute("x1", xOf(i));
-    line.setAttribute("x2", xOf(i));
-    line.setAttribute("opacity", 0.5);
-    const ds = `${b.t.getFullYear()}.${String(b.t.getMonth() + 1).padStart(2, "0")}.${String(b.t.getDate()).padStart(2, "0")}`;
-    tip.innerHTML = `${ds}<br/><b>${fmtPrice(b.c, "")}</b>`;
-    tip.style.left = `${(e.clientX - rect.left) + 14}px`;
-    tip.style.top = `${(e.clientY - rect.top) - 50}px`;
-    tip.classList.add("live");
-  });
-  zone.addEventListener("mouseleave", () => {
-    line.setAttribute("opacity", 0);
-    tip.classList.remove("live");
-  });
+  // chartHoverCtx 업데이트 (SVG-레벨 핸들러가 읽음)
+  chartHoverCtx.W = W;
+  chartHoverCtx.H = H;
+  chartHoverCtx.padL = padL;
+  chartHoverCtx.padT = padT;
+  chartHoverCtx.padB = padB;
+  chartHoverCtx.bars = bars;
+  chartHoverCtx.hoverWidth = hoverWidth;
+  chartHoverCtx.xOf = xOf;
 }
 
 /* ==================== 평결/처방/바이탈 ==================== */
@@ -1871,6 +1865,18 @@ function renderActions(actions) {
     </div>`).join("");
 }
 
+/* ==================== 차트 인터랙션 상태 ==================== */
+let chartHoverCtx = {
+  W: 1200, H: 460,
+  padL: 14, padT: 28, padB: 50,
+  bars: null,
+  hoverWidth: 0,
+  xOf: null,
+};
+let annotOffsets = {};  // 주석 위치 오프셋 (메모리, 종목 바뀌면 리셋)
+let annotDragState = null;
+const ANNOT_RADIUS = 80;  // 드래그 가능 반경
+
 /* ==================== 차트 features 토글 (localStorage) ==================== */
 const FEATURES_KEY = 'clinic_chart_features_v1';
 const defaultFeatures = {
@@ -1908,6 +1914,94 @@ function setupLegendToggles() {
       // 차트 다시 그리기
       if (state.data) applyRange(state.rangeMonths);
     });
+  });
+}
+
+/* ==================== 차트 마우스 인터랙션 (한 번만 setup) ==================== */
+function setupChartInteractions() {
+  const svg = $("chart");
+
+  // 호버 크로스헤어 (SVG 레벨)
+  svg.addEventListener('mousemove', (e) => {
+    if (annotDragState) return;  // 드래그 중엔 호버 무시
+    const ctx = chartHoverCtx;
+    if (!ctx.bars) return;
+    const rect = svg.getBoundingClientRect();
+    const x = (e.clientX - rect.left) * (ctx.W / rect.width);
+    const y = (e.clientY - rect.top) * (ctx.H / rect.height);
+    const line = document.getElementById('hover-line');
+    const tip = $('hover-tip');
+    if (!line || !tip) return;
+    // 차트 그리는 영역 밖이면 숨김
+    if (x < ctx.padL || x > ctx.padL + ctx.hoverWidth || y < ctx.padT || y > ctx.H - ctx.padB) {
+      line.setAttribute('opacity', 0);
+      tip.classList.remove('live');
+      return;
+    }
+    const i = Math.max(0, Math.min(ctx.bars.length - 1,
+      Math.round((x - ctx.padL) / ctx.hoverWidth * (ctx.bars.length - 1))));
+    const b = ctx.bars[i];
+    const xPos = ctx.xOf(i);
+    line.setAttribute('x1', xPos);
+    line.setAttribute('x2', xPos);
+    line.setAttribute('opacity', 0.5);
+    const ds = `${b.t.getFullYear()}.${String(b.t.getMonth() + 1).padStart(2, '0')}.${String(b.t.getDate()).padStart(2, '0')}`;
+    tip.innerHTML = `${ds}<br/><b>${fmtPrice(b.c, '')}</b>`;
+    tip.style.left = `${(e.clientX - rect.left) + 14}px`;
+    tip.style.top = `${(e.clientY - rect.top) - 50}px`;
+    tip.classList.add('live');
+  });
+
+  svg.addEventListener('mouseleave', () => {
+    if (annotDragState) return;
+    const line = document.getElementById('hover-line');
+    const tip = $('hover-tip');
+    if (line) line.setAttribute('opacity', 0);
+    if (tip) tip.classList.remove('live');
+  });
+
+  // 주석 드래그 시작
+  svg.addEventListener('mousedown', (e) => {
+    const target = e.target.closest('.draggable-annot');
+    if (!target) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const id = target.dataset.annotId;
+    const rect = svg.getBoundingClientRect();
+    const ctx = chartHoverCtx;
+    const o = annotOffsets[id] || { dx: 0, dy: 0 };
+    annotDragState = {
+      id, target,
+      startX: e.clientX, startY: e.clientY,
+      startDx: o.dx, startDy: o.dy,
+      scaleX: ctx.W / rect.width,
+      scaleY: ctx.H / rect.height,
+    };
+    target.style.cursor = 'grabbing';
+  });
+
+  // 드래그 중 (document 레벨이라 SVG 밖 나가도 추적됨)
+  document.addEventListener('mousemove', (e) => {
+    if (!annotDragState) return;
+    const d = annotDragState;
+    let dx = d.startDx + (e.clientX - d.startX) * d.scaleX;
+    let dy = d.startDy + (e.clientY - d.startY) * d.scaleY;
+    // 반경 제한
+    const dist = Math.hypot(dx, dy);
+    if (dist > ANNOT_RADIUS) {
+      dx = dx / dist * ANNOT_RADIUS;
+      dy = dy / dist * ANNOT_RADIUS;
+    }
+    d.target.setAttribute('transform', `translate(${dx.toFixed(1)}, ${dy.toFixed(1)})`);
+    annotOffsets[d.id] = { dx, dy };
+  });
+
+  // 드래그 끝
+  document.addEventListener('mouseup', () => {
+    if (annotDragState) {
+      annotDragState.target.style.cursor = '';
+      annotDragState = null;
+    }
   });
 }
 
@@ -1978,6 +2072,9 @@ async function analyze(rawSym) {
     const data = await loadData(symbol);
     data.ticker = symbol;
     console.log("Source:", data.source, "Bars:", data.bars.length);
+
+    // 종목 바뀌면 주석 오프셋 리셋 (차트 형태가 다르니까)
+    if (state.symbol !== symbol) annotOffsets = {};
 
     state.data = data;
     state.symbol = symbol;
@@ -2254,6 +2351,7 @@ window.addEventListener("DOMContentLoaded", () => {
   renderWatchlist();
   syncLegendToggles();
   setupLegendToggles();
+  setupChartInteractions();
   $("ticker").value = "AAPL";
   analyze("AAPL");
 });
