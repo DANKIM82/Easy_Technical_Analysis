@@ -1249,14 +1249,19 @@ function findLevels(bars, currentPrice) {
   const totalBars = bars.length;
   // 현재가에서 너무 멀면 제외 (위/아래 각 50%)
   const MAX_DIST_PCT = 0.50;
+  // 현재가에서 너무 가까우면 제외 (3% 안은 "전투 영역", 의미 없음)
+  const MIN_DIST_PCT = 0.03;
+  // 폴라리티 플립: 깨진 고점이 지지가 되려면 5% 이상 위로 돌파해야
+  const FLIP_THRESHOLD = 0.05;
 
-  // 저항 후보: 현재가 위의 고점 피벗 (그리고 폴라리티 플립 시 위로 뚫린 저점도 포함 가능)
-  const resistanceCandidates = hi.filter(h => h.p > currentPrice);
-  // 지지 후보: 현재가 아래의 저점 피벗
-  // (+ 폴라리티 플립: 현재가 아래의 옛 고점도 지지로 작용 가능)
+  // 저항 후보: 현재가에서 적어도 3% 위의 고점 피벗
+  const resistanceCandidates = hi.filter(h => h.p > currentPrice * (1 + MIN_DIST_PCT));
+  // 지지 후보:
+  // - 현재가 3% 아래의 저점 피벗
+  // - 현재가 5% 아래의 옛 고점 (폴라리티 플립, 충분히 깨져야 함)
   const supportCandidates = [
-    ...lo.filter(l => l.p < currentPrice),
-    ...hi.filter(h => h.p < currentPrice)  // 깨진 저항 → 지지로 변신
+    ...lo.filter(l => l.p < currentPrice * (1 - MIN_DIST_PCT)),
+    ...hi.filter(h => h.p < currentPrice * (1 - FLIP_THRESHOLD))
   ];
 
   const cluster = (pts, allowSingleIfRecent) => {
