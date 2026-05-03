@@ -1243,6 +1243,14 @@ function fmtPrice(n, currency) {
   if (n >= 100) return sym + n.toLocaleString(undefined, { maximumFractionDigits: 2 });
   return sym + n.toFixed(2);
 }
+function fmtPriceLabel(n) {
+  // 차트용: 통화 기호 없이, 적당히 둥글려서 깔끔하게
+  if (n == null || isNaN(n)) return "—";
+  if (n >= 1000) return Math.round(n).toLocaleString();
+  if (n >= 100) return Math.round(n).toString();
+  if (n >= 10) return n.toFixed(1);
+  return n.toFixed(2);
+}
 function fmtPct(n) {
   if (n == null || isNaN(n)) return "—";
   return `${n >= 0 ? "+" : ""}${n.toFixed(2)}%`;
@@ -1252,7 +1260,7 @@ function fmtPct(n) {
 function drawChart(bars, ma50Vis, ma200Vis, levels, currentPrice, rangeMonths) {
   const svg = $("chart");
   const W = 1200, H = 460;
-  const padL = 14, padR = 88, padT = 28, padB = 38;
+  const padL = 14, padR = 100, padT = 28, padB = 38;
   const cw = W - padL - padR, ch = H - padT - padB;
 
   const closes = bars.map(b => b.c);
@@ -1265,15 +1273,26 @@ function drawChart(bars, ma50Vis, ma200Vis, levels, currentPrice, rangeMonths) {
   const xOf = (i) => padL + (i / (bars.length - 1)) * cw;
   const yOf = (p) => padT + (1 - (p - minP) / (maxP - minP)) * ch;
 
+  // 라벨이 들어갈 Y 위치 미리 계산 (겹침 방지용)
+  const reservedYs = [
+    ...levels.resistances.map(lv => yOf(lv.price)),
+    ...levels.supports.map(lv => yOf(lv.price)),
+    yOf(currentPrice)
+  ];
+
   let s = "";
 
-  // 가로 격자
-  const yTicks = 5;
+  // 가로 격자 + Y축 라벨 (단순화: 4개만, 가격 라벨과 겹치면 숨김)
+  const yTicks = 3;
   for (let k = 0; k <= yTicks; k++) {
     const p = minP + ((maxP - minP) * k) / yTicks;
     const y = yOf(p);
-    s += `<line x1="${padL}" x2="${W - padR}" y1="${y}" y2="${y}" stroke="rgba(29,34,48,0.06)"/>`;
-    s += `<text x="${W - padR + 8}" y="${y + 4}" font-size="11" fill="#8a91a3">${fmtPrice(p, "")}</text>`;
+    s += `<line x1="${padL}" x2="${W - padR}" y1="${y}" y2="${y}" stroke="rgba(29,34,48,0.05)"/>`;
+    // 가까운 라벨이 있으면 Y축 라벨 숨김
+    const overlaps = reservedYs.some(ry => Math.abs(ry - y) < 16);
+    if (!overlaps) {
+      s += `<text x="${W - padR + 6}" y="${y + 4}" font-size="10" fill="#b0b6c4">${fmtPriceLabel(p)}</text>`;
+    }
   }
 
   // 월/년 라벨 (시계열 길이에 따라 간격 조정)
@@ -1310,15 +1329,21 @@ function drawChart(bars, ma50Vis, ma200Vis, levels, currentPrice, rangeMonths) {
   const closeLine = bars.map((b, i) => `${xOf(i)},${yOf(b.c)}`).join(" ");
   s += `<polyline points="${closeLine}" fill="none" stroke="#1d2230" stroke-width="2.4" stroke-linejoin="round"/>`;
 
+  // 라벨 위치 (가격 핀): 차트 우측 거터에 위치
+  const pillX = W - padR + 4;
+  const pillW = 88;
+  const pillTextX = pillX + pillW / 2;
+
   // 저항선
   levels.resistances.forEach((lv, idx) => {
     const y = yOf(lv.price);
     const op = 0.95 - idx * 0.18;
     s += `<line x1="${padL}" x2="${W - padR}" y1="${y}" y2="${y}" stroke="#d94626" stroke-width="1.6" stroke-dasharray="8 5" opacity="${op}"/>`;
-    s += `<g><rect x="${W - padR - 80}" y="${y - 11}" width="76" height="22" fill="#d94626" rx="4"/>
-      <text x="${W - padR - 42}" y="${y + 4}" font-size="11" fill="white" text-anchor="middle" font-weight="700">${fmtPrice(lv.price, "")}</text></g>`;
+    s += `<g><rect x="${pillX}" y="${y - 12}" width="${pillW}" height="24" fill="#d94626" rx="6"/>
+      <text x="${pillTextX}" y="${y + 5}" font-size="12" fill="white" text-anchor="middle" font-weight="700">${fmtPriceLabel(lv.price)}</text></g>`;
     if (idx === 0) {
-      s += `<text x="${padL + 16}" y="${y - 6}" class="annotation" font-size="20" fill="#d94626">↑ 자꾸 여기서 막혀요!</text>`;
+      // 화살표 ↓ (천장 막혀서 다시 떨어짐)
+      s += `<text x="${padL + 16}" y="${y - 8}" class="annotation" font-size="20" fill="#d94626">↓ 자꾸 여기서 막혀요!</text>`;
     }
   });
 
@@ -1327,14 +1352,15 @@ function drawChart(bars, ma50Vis, ma200Vis, levels, currentPrice, rangeMonths) {
     const y = yOf(lv.price);
     const op = 0.95 - idx * 0.18;
     s += `<line x1="${padL}" x2="${W - padR}" y1="${y}" y2="${y}" stroke="#2d8659" stroke-width="1.6" stroke-dasharray="8 5" opacity="${op}"/>`;
-    s += `<g><rect x="${W - padR - 80}" y="${y - 11}" width="76" height="22" fill="#2d8659" rx="4"/>
-      <text x="${W - padR - 42}" y="${y + 4}" font-size="11" fill="white" text-anchor="middle" font-weight="700">${fmtPrice(lv.price, "")}</text></g>`;
+    s += `<g><rect x="${pillX}" y="${y - 12}" width="${pillW}" height="24" fill="#2d8659" rx="6"/>
+      <text x="${pillTextX}" y="${y + 5}" font-size="12" fill="white" text-anchor="middle" font-weight="700">${fmtPriceLabel(lv.price)}</text></g>`;
     if (idx === 0) {
-      s += `<text x="${padL + 16}" y="${y + 22}" class="annotation" font-size="20" fill="#2d8659">↓ 자꾸 여기서 튕겨요!</text>`;
+      // 화살표 ↑ (바닥 튕겨서 다시 올라감)
+      s += `<text x="${padL + 16}" y="${y + 24}" class="annotation" font-size="20" fill="#2d8659">↑ 자꾸 여기서 튕겨요!</text>`;
     }
   });
 
-  // 현재가 마커
+  // 현재가 마커 (점)
   const lastIdx = bars.length - 1;
   const lx = xOf(lastIdx), ly = yOf(currentPrice);
   s += `<circle cx="${lx}" cy="${ly}" r="8" fill="#d94626" stroke="white" stroke-width="3"/>`;
@@ -1349,6 +1375,11 @@ function drawChart(bars, ma50Vis, ma200Vis, levels, currentPrice, rangeMonths) {
       <text x="${bubbleX + 43}" y="${bubbleY - 6}" font-size="12" fill="white" text-anchor="middle" font-weight="700">지금 여기!</text>
     </g>`;
   }
+  // 현재가 라벨 (잉크색 핀, 우측, 다른 라벨 위에 우선 노출)
+  s += `<g>
+    <rect x="${pillX - 2}" y="${ly - 14}" width="${pillW + 4}" height="28" fill="#1d2230" rx="7" stroke="white" stroke-width="2"/>
+    <text x="${pillTextX}" y="${ly + 6}" font-size="13" fill="white" text-anchor="middle" font-weight="800">${fmtPriceLabel(currentPrice)}</text>
+  </g>`;
 
   s += `<rect id="hover-zone" x="${padL}" y="${padT}" width="${cw}" height="${ch}" fill="transparent" cursor="crosshair"/>`;
   s += `<line id="hover-line" x1="0" x2="0" y1="${padT}" y2="${H - padB}" stroke="#1d2230" stroke-width="1" stroke-dasharray="3 3" opacity="0" pointer-events="none"/>`;
