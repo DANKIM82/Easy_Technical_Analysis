@@ -598,6 +598,25 @@
     font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--ink-soft);
   }
   .legend-item { display: flex; align-items: center; gap: 6px; }
+  .legend-item[data-feature] {
+    cursor: pointer;
+    user-select: none;
+    padding: 3px 8px;
+    border-radius: 999px;
+    transition: all 0.15s ease;
+    border: 1.5px solid transparent;
+  }
+  .legend-item[data-feature]:hover {
+    background: var(--bg-deep);
+    border-color: var(--ink-faded);
+  }
+  .legend-item[data-feature].off {
+    opacity: 0.35;
+  }
+  .legend-item[data-feature].off .legend-swatch {
+    background: var(--ink-faded) !important;
+    background-image: none !important;
+  }
   .legend-swatch { width: 16px; height: 3px; border-radius: 2px; }
   .legend-swatch.diag {
     width: 18px; height: 14px; background: transparent !important;
@@ -879,10 +898,10 @@
           <span class="legend-item"><span class="legend-swatch" style="background: var(--line);"></span>주가</span>
           <span class="legend-item"><span class="legend-swatch" style="background: var(--ma50);"></span>50일</span>
           <span class="legend-item"><span class="legend-swatch" style="background: var(--ma200);"></span>200일</span>
-          <span class="legend-item"><span class="legend-swatch" style="background: var(--bad);"></span>저항</span>
-          <span class="legend-item"><span class="legend-swatch" style="background: var(--good);"></span>지지</span>
-          <span class="legend-item" style="color: var(--good);"><span class="legend-swatch diag"></span>↗ 상승추세</span>
-          <span class="legend-item" style="color: var(--bad);"><span class="legend-swatch diag down"></span>↘ 하락추세</span>
+          <span class="legend-item" data-feature="resistance" title="클릭해서 켜기/끄기"><span class="legend-swatch" style="background: var(--bad);"></span>저항</span>
+          <span class="legend-item" data-feature="support" title="클릭해서 켜기/끄기"><span class="legend-swatch" style="background: var(--good);"></span>지지</span>
+          <span class="legend-item" data-feature="uptrend" style="color: var(--good);" title="클릭해서 켜기/끄기"><span class="legend-swatch diag"></span>↗ 상승추세</span>
+          <span class="legend-item" data-feature="downtrend" style="color: var(--bad);" title="클릭해서 켜기/끄기"><span class="legend-swatch diag down"></span>↘ 하락추세</span>
         </div>
       </div>
       <div class="chart-wrap">
@@ -1291,32 +1310,34 @@ function findTrendLines(bars) {
   // 후보 조합 → 점수 → 베스트
   function bestLine(pivots, isUp) {
     if (pivots.length < 2) return null;
-    // 최근 8개 피벗만 후보로 (옛날 끼리 연결되면 무관함)
-    const candidates = pivots.slice(-8);
+    // 최소 분리 거리: 최소 30바 또는 가시 영역 15%
+    const minSep = Math.max(30, Math.floor(N * 0.15));
+    // 끝점 후보: 최근 5개 피벗만
+    const endCandidates = pivots.slice(-5);
+    // 시작점 후보: 모든 피벗 (제일 긴 라인 찾기 위함)
     let best = null, bestScore = -Infinity;
 
-    for (let i = 0; i < candidates.length - 1; i++) {
-      for (let j = i + 1; j < candidates.length; j++) {
-        const a = candidates[i], b = candidates[j];
-        // 너무 가까운 두 점은 패스
-        if (b.i - a.i < 8) continue;
-        // 방향 검증 (상승추세는 b.p > a.p, 하락추세는 b.p < a.p)
-        if (isUp && b.p <= a.p) continue;
-        if (!isUp && b.p >= a.p) continue;
+    for (const end of endCandidates) {
+      for (const start of pivots) {
+        // 너무 가까우면 패스
+        if (end.i - start.i < minSep) continue;
+        // 방향 검증
+        if (isUp && end.p <= start.p) continue;
+        if (!isUp && end.p >= start.p) continue;
 
-        const slope = (b.p - a.p) / (b.i - a.i);
-        const intercept = a.p - slope * a.i;
+        const slope = (end.p - start.p) / (end.i - start.i);
+        const intercept = start.p - slope * start.i;
         // 너무 가파른 라인은 제외
         const slopePct = Math.abs(slope) * N / priceScale;
         if (slopePct > 0.6) continue;
 
-        // 점수: 다른 피벗이 라인 근처/올바른 방향에 있는지
+        // 두 점 사이 다른 피벗들 검증
         const tol = priceScale * 0.015;
-        let touches = 2; // a, b 포함
-        let breaks = 0; // 라인 깨졌는지
+        let touches = 2; // start, end 포함
+        let breaks = 0;
         for (const p of pivots) {
-          if (p === a || p === b) continue;
-          if (p.i < a.i || p.i > b.i) continue; // 두 점 사이 구간만
+          if (p === start || p === end) continue;
+          if (p.i < start.i || p.i > end.i) continue;
           const expectedP = slope * p.i + intercept;
           const diff = p.p - expectedP;
           if (Math.abs(diff) < tol) touches++;
@@ -1324,18 +1345,18 @@ function findTrendLines(bars) {
           else if (!isUp && diff > tol * 1.5) breaks++;
         }
 
-        // 최근일수록 + 깨진 적 적을수록 + 터치 많을수록 ↑
-        const recency = b.i / N;
-        const score = touches * 2 + recency * 5 - breaks * 3;
+        // 점수: 라인 길이 + 터치 수 + 최근일수록 + 깨짐 적을수록
+        const length = (end.i - start.i) / N; // 0~1
+        const recency = end.i / N;
+        const score = touches * 2 + length * 6 + recency * 3 - breaks * 3;
 
         if (score > bestScore) {
           bestScore = score;
-          best = { startI: a.i, startP: a.p, endI: b.i, endP: b.p, slope, intercept, touches };
+          best = { startI: start.i, startP: start.p, endI: end.i, endP: end.p, slope, intercept, touches };
         }
       }
     }
-    // 최소 점수 미만이면 그리지 않음 (잘 안 맞으면 차라리 안 그림)
-    if (bestScore < 4) return null;
+    if (bestScore < 5) return null;
     return best;
   }
 
@@ -1383,10 +1404,10 @@ function drawChart(bars, ma50Vis, ma200Vis, levels, trendLines, currentPrice, ra
   const xOf = (i) => padL + (i / (bars.length - 1)) * cw;
   const yOf = (p) => padT + (1 - (p - minP) / (maxP - minP)) * ch;
 
-  // 라벨이 들어갈 Y 위치 미리 계산 (겹침 방지용)
+  // 라벨이 들어갈 Y 위치 미리 계산 (겹침 방지용) — 보이는 것만
   const reservedYs = [
-    ...levels.resistances.map(lv => yOf(lv.price)),
-    ...levels.supports.map(lv => yOf(lv.price)),
+    ...(chartFeatures.resistance ? levels.resistances.map(lv => yOf(lv.price)) : []),
+    ...(chartFeatures.support ? levels.supports.map(lv => yOf(lv.price)) : []),
     yOf(currentPrice)
   ];
 
@@ -1465,10 +1486,8 @@ function drawChart(bars, ma50Vis, ma200Vis, levels, trendLines, currentPrice, ra
     }
     return out;
   };
-  if (trendLines) {
-    s += drawTrend(trendLines.up, "#2d8659", "↗ 상승 추세선");
-    s += drawTrend(trendLines.down, "#d94626", "↘ 하락 추세선");
-  }
+  if (trendLines && chartFeatures.uptrend) s += drawTrend(trendLines.up, "#2d8659", "↗ 상승 추세선");
+  if (trendLines && chartFeatures.downtrend) s += drawTrend(trendLines.down, "#d94626", "↘ 하락 추세선");
 
   // 라벨 위치 (가격 핀): 차트 우측 거터에 위치
   const pillX = W - padR + 4;
@@ -1476,7 +1495,7 @@ function drawChart(bars, ma50Vis, ma200Vis, levels, trendLines, currentPrice, ra
   const pillTextX = pillX + pillW / 2;
 
   // 저항선
-  levels.resistances.forEach((lv, idx) => {
+  if (chartFeatures.resistance) levels.resistances.forEach((lv, idx) => {
     const y = yOf(lv.price);
     const op = 0.95 - idx * 0.18;
     s += `<line x1="${padL}" x2="${W - padR}" y1="${y}" y2="${y}" stroke="#d94626" stroke-width="1.6" stroke-dasharray="8 5" opacity="${op}"/>`;
@@ -1489,7 +1508,7 @@ function drawChart(bars, ma50Vis, ma200Vis, levels, trendLines, currentPrice, ra
   });
 
   // 지지선
-  levels.supports.forEach((lv, idx) => {
+  if (chartFeatures.support) levels.supports.forEach((lv, idx) => {
     const y = yOf(lv.price);
     const op = 0.95 - idx * 0.18;
     s += `<line x1="${padL}" x2="${W - padR}" y1="${y}" y2="${y}" stroke="#2d8659" stroke-width="1.6" stroke-dasharray="8 5" opacity="${op}"/>`;
@@ -1774,6 +1793,45 @@ function renderActions(actions) {
       <div class="head">${a.head}</div>
       <div class="body">${a.body}</div>
     </div>`).join("");
+}
+
+/* ==================== 차트 features 토글 (localStorage) ==================== */
+const FEATURES_KEY = 'clinic_chart_features_v1';
+const defaultFeatures = {
+  resistance: true,
+  support: true,
+  uptrend: true,
+  downtrend: true,
+};
+function loadFeatures() {
+  try {
+    const raw = localStorage.getItem(FEATURES_KEY);
+    return raw ? { ...defaultFeatures, ...JSON.parse(raw) } : { ...defaultFeatures };
+  } catch { return { ...defaultFeatures }; }
+}
+function saveFeatures(f) {
+  try { localStorage.setItem(FEATURES_KEY, JSON.stringify(f)); } catch {}
+}
+let chartFeatures = loadFeatures();
+
+function syncLegendToggles() {
+  document.querySelectorAll('.legend-item[data-feature]').forEach(el => {
+    const f = el.dataset.feature;
+    el.classList.toggle('off', !chartFeatures[f]);
+  });
+}
+
+function setupLegendToggles() {
+  document.querySelectorAll('.legend-item[data-feature]').forEach(el => {
+    el.addEventListener('click', () => {
+      const f = el.dataset.feature;
+      chartFeatures[f] = !chartFeatures[f];
+      saveFeatures(chartFeatures);
+      el.classList.toggle('off', !chartFeatures[f]);
+      // 차트 다시 그리기
+      if (state.data) applyRange(state.rangeMonths);
+    });
+  });
 }
 
 /* ==================== 상태 + 메인 흐름 ==================== */
@@ -2117,6 +2175,8 @@ $("star-toggle").addEventListener('click', () => {
 window.addEventListener("DOMContentLoaded", () => {
   renderPopularChips();
   renderWatchlist();
+  syncLegendToggles();
+  setupLegendToggles();
   $("ticker").value = "AAPL";
   analyze("AAPL");
 });
