@@ -15,7 +15,7 @@
     --bad: #d94626; --bad-soft: #fadcd2;
     --warn: #d9881a; --warn-soft: #fbe8c7;
     --resistance: #d94626; --support: #2d8659;
-    --line: #1d2230; --ma50: #d9881a; --ma200: #8a91a3;
+    --line: #1d2230; --ma50: #d9881a; --ma200: #7a72a8;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html, body {
@@ -1305,7 +1305,7 @@ function findLevels(bars, currentPrice) {
       })
       .filter(g => g.distPct < MAX_DIST_PCT)
       .sort((a, b) => b.score - a.score)
-      .slice(0, 2);
+      .slice(0, 1);  // 가장 가치 있는 1개만
   };
 
   return {
@@ -1481,7 +1481,7 @@ function drawChart(bars, ma50Vis, ma200Vis, levels, trendLines, currentPrice, ra
     const pts = data.map((v, i) => v == null ? null : `${xOf(i)},${yOf(v)}`).filter(Boolean).join(" ");
     return pts ? `<polyline points="${pts}" fill="none" stroke="${color}" stroke-width="${width}" ${dash ? `stroke-dasharray="${dash}"` : ""} stroke-linejoin="round"/>` : "";
   };
-  s += drawMA(ma200Vis, "#8a91a3", "5 5", 1.5);
+  s += drawMA(ma200Vis, "#7a72a8", "6 4", 2);
   s += drawMA(ma50Vis, "#d9881a", null, 2);
 
   // 가격 라인
