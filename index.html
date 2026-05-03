@@ -896,8 +896,8 @@
         </div>
         <div class="legend">
           <span class="legend-item"><span class="legend-swatch" style="background: var(--line);"></span>주가</span>
-          <span class="legend-item"><span class="legend-swatch" style="background: var(--ma50);"></span>50일</span>
-          <span class="legend-item"><span class="legend-swatch" style="background: var(--ma200);"></span>200일</span>
+          <span class="legend-item"><span class="legend-swatch" style="background: var(--ma50);"></span>⚡ 50일 단기</span>
+          <span class="legend-item"><span class="legend-swatch" style="background: var(--ma200);"></span>🐢 200일 장기</span>
           <span class="legend-item" data-feature="resistance" title="클릭해서 켜기/끄기"><span class="legend-swatch" style="background: var(--bad);"></span>저항</span>
           <span class="legend-item" data-feature="support" title="클릭해서 켜기/끄기"><span class="legend-swatch" style="background: var(--good);"></span>지지</span>
           <span class="legend-item" data-feature="uptrend" style="color: var(--good);" title="클릭해서 켜기/끄기"><span class="legend-swatch diag"></span>↗ 상승추세</span>
@@ -1508,8 +1508,38 @@ function drawChart(bars, ma50Vis, ma200Vis, levels, trendLines, currentPrice, ra
     const pts = data.map((v, i) => v == null ? null : `${xOf(i)},${yOf(v)}`).filter(Boolean).join(" ");
     return pts ? `<polyline points="${pts}" fill="none" stroke="${color}" stroke-width="${width}" ${dash ? `stroke-dasharray="${dash}"` : ""} stroke-linejoin="round"/>` : "";
   };
-  s += drawMA(ma200Vis, "#7a72a8", "6 4", 2);
+  s += drawMA(ma200Vis, "#7a72a8", "6 4", 3);
   s += drawMA(ma50Vis, "#d9881a", null, 2);
+
+  // MA 끝에 직관적 라벨 (⚡ 단기 / 🐢 장기)
+  const lastValidMA = (arr) => {
+    for (let i = arr.length - 1; i >= 0; i--) {
+      if (arr[i] != null) return arr[i];
+    }
+    return null;
+  };
+  const ma50LastV = lastValidMA(ma50Vis);
+  const ma200LastV = lastValidMA(ma200Vis);
+  if (ma50LastV != null) {
+    let y50 = yOf(ma50LastV);
+    // 200일선이 가까이 있으면 위로 살짝 띄움 (안 겹치게)
+    if (ma200LastV != null && Math.abs(y50 - yOf(ma200LastV)) < 22) {
+      y50 = yOf(ma50LastV) - 8;
+    } else {
+      y50 = yOf(ma50LastV) - 4;
+    }
+    s += `<text x="${(todayX + 10).toFixed(1)}" y="${y50.toFixed(1)}" font-family="Caveat" font-weight="700" font-size="16" fill="#d9881a" text-anchor="start">⚡ 50일</text>`;
+  }
+  if (ma200LastV != null) {
+    let y200 = yOf(ma200LastV);
+    // 50일선이 가까이 있으면 아래로 살짝 띄움
+    if (ma50LastV != null && Math.abs(y200 - yOf(ma50LastV)) < 22) {
+      y200 = yOf(ma200LastV) + 18;
+    } else {
+      y200 = yOf(ma200LastV) + 16;
+    }
+    s += `<text x="${(todayX + 10).toFixed(1)}" y="${y200.toFixed(1)}" font-family="Caveat" font-weight="700" font-size="16" fill="#7a72a8" text-anchor="start">🐢 200일</text>`;
+  }
 
   // 가격 라인
   const closeLine = bars.map((b, i) => `${xOf(i)},${yOf(b.c)}`).join(" ");
