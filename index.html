@@ -665,6 +665,42 @@
     position: relative; overflow: hidden;
   }
   .vital:hover { transform: translate(-2px, -2px); box-shadow: 7px 7px 0 var(--ink); }
+  .vital.hot {
+    background: linear-gradient(135deg, #fff8e8 0%, #ffe8d0 100%);
+    border-color: #d9881a;
+    animation: vital-shake 2.4s ease-in-out infinite;
+  }
+  .vital.hot::before {
+    content: '🔥 RVOL';
+    position: absolute;
+    top: -2px; right: 14px;
+    background: #d94626;
+    color: white;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    font-size: 10px;
+    padding: 4px 10px 5px;
+    border-radius: 0 0 8px 8px;
+    border: 2px solid var(--ink);
+    border-top: none;
+    letter-spacing: 0.08em;
+    z-index: 2;
+  }
+  @keyframes vital-shake {
+    0%, 90%, 100% { transform: rotate(0); }
+    93% { transform: rotate(-0.8deg); }
+    96% { transform: rotate(0.8deg); }
+  }
+  .vital.hot:hover { animation: none; transform: translate(-2px, -2px); }
+  .vital .rvol-big {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 800;
+    font-size: 22px;
+    color: #d94626;
+    margin-left: 8px;
+    display: inline-block;
+    letter-spacing: -0.02em;
+  }
   .vital .emoji-big { font-size: 38px; margin-bottom: 8px; display: block; }
   .vital .label-tiny {
     font-family: 'JetBrains Mono', monospace; font-size: 11px;
@@ -1605,6 +1641,25 @@ function drawChart(bars, ma50Vis, ma200Vis, levels, trendLines, currentPrice, ra
     // 라벨
     const panelLabel = isValue ? '거래대금' : '거래량';
     s += `<text x="${padL + 4}" y="${(volTop + 13).toFixed(1)}" font-size="9" fill="#8a91a3" font-weight="700" letter-spacing="0.05em">${panelLabel}</text>`;
+
+    // 20일 거래량 이동평균선
+    const maPeriod = 20;
+    const maPts = [];
+    for (let i = maPeriod - 1; i < bars.length; i++) {
+      const slice = series.slice(i - maPeriod + 1, i + 1);
+      const avg = slice.reduce((a, b) => a + b, 0) / maPeriod;
+      const x = xOf(i);
+      const y = volBot - (avg / maxS) * (volH - 4);
+      maPts.push(`${x.toFixed(1)},${y.toFixed(1)}`);
+    }
+    if (maPts.length > 1) {
+      s += `<polyline points="${maPts.join(' ')}" fill="none" stroke="#1d2230" stroke-width="1.4" stroke-dasharray="3 3" opacity="0.55"/>`;
+    }
+    // MA 라벨 (우측)
+    if (maPts.length > 0) {
+      const lastY = parseFloat(maPts[maPts.length - 1].split(',')[1]);
+      s += `<text x="${(W - padR - 2).toFixed(1)}" y="${(lastY - 3).toFixed(1)}" font-size="8" fill="#1d2230" text-anchor="end" font-weight="700" opacity="0.7">20일평균</text>`;
+    }
   }
 
   // 대각선 추세선 (Dynamic Levels) — 미래까지 연장
@@ -1851,24 +1906,31 @@ function buildVitals({ ma50Last, ma200Last, rsiLast, currentPrice, fullCloses, b
       const window = turns.slice(-21, -1);
       const avgT = window.length > 0 ? window.reduce((a, b) => a + b, 0) / window.length : lastT;
       const ratio = avgT > 0 ? lastT / avgT : 1;
-      let status, tone, explain;
+      const rvolPct = (ratio * 100).toFixed(0);
+      let status, tone, explain, hot = false;
       if (ratio >= 2.5) {
-        status = `🔥 폭증 (${ratio.toFixed(1)}배)`; tone = "warn";
-        explain = `평균(${fmtMoney(avgT, currency)})의 2.5배 이상 폭증! 큰손이 움직이는 신호. 가격 방향이 진짜인지 확인하세요.`;
+        hot = true;
+        status = `🔥 폭증 ${rvolPct}%`; tone = "warn";
+        explain = `평균(${fmtMoney(avgT, currency)})의 ${rvolPct}%! 대장주 후보. 큰손이 움직이는 신호. 가격 방향이 진짜인지 확인하세요.`;
+      } else if (ratio >= 2) {
+        hot = true;
+        status = `🔥 활발 ${rvolPct}%`; tone = "good";
+        explain = `평균(${fmtMoney(avgT, currency)})의 ${rvolPct}%. 시장 주도주의 모습. 추세 신뢰도 높음.`;
       } else if (ratio >= 1.5) {
-        status = `📈 활발 (${ratio.toFixed(1)}배)`; tone = "good";
-        explain = `평균(${fmtMoney(avgT, currency)})보다 활발해요. 추세에 힘이 실리고 있어요.`;
+        status = `📈 활발 ${rvolPct}%`; tone = "good";
+        explain = `평균(${fmtMoney(avgT, currency)})보다 활발해요 (${rvolPct}%). 추세에 힘이 실리고 있어요.`;
       } else if (ratio < 0.5) {
-        status = `😴 한산 (${ratio.toFixed(1)}배)`; tone = "warn";
-        explain = `평균(${fmtMoney(avgT, currency)})의 절반도 안 돼요. 시장 관심 식음 또는 폭발 전 고요.`;
+        status = `😴 한산 ${rvolPct}%`; tone = "warn";
+        explain = `평균(${fmtMoney(avgT, currency)})의 ${rvolPct}%. 시장 관심 식음 또는 폭발 전 고요.`;
       } else {
-        status = `평소 수준`; tone = "good";
+        status = `평소 수준 ${rvolPct}%`; tone = "good";
         explain = `평균(${fmtMoney(avgT, currency)})과 비슷한 흐름.`;
       }
       return {
         emoji: "💰", label: "오늘 거래대금",
         value: fmtMoney(lastT, currency),
-        status, tone, explain
+        rvol: hot ? `${ratio.toFixed(1)}x` : null,
+        status, tone, explain, hot
       };
     })(),
     (() => {
@@ -1878,24 +1940,31 @@ function buildVitals({ ma50Last, ma200Last, rsiLast, currentPrice, fullCloses, b
       const window = vols.slice(-21, -1);
       const avgV = window.length > 0 ? window.reduce((a, b) => a + b, 0) / window.length : lastV;
       const ratio = avgV > 0 ? lastV / avgV : 1;
-      let status, tone, explain;
+      const rvolPct = (ratio * 100).toFixed(0);
+      let status, tone, explain, hot = false;
       if (ratio >= 2.5) {
-        status = `🔥 폭증 (${ratio.toFixed(1)}배)`; tone = "warn";
-        explain = `평소(${fmtVolume(avgV)})의 2.5배 이상. 거래량 폭증은 추세 전환의 신호일 수도.`;
+        hot = true;
+        status = `🔥 폭증 ${rvolPct}%`; tone = "warn";
+        explain = `평소(${fmtVolume(avgV)})의 ${rvolPct}%. 거래량 폭증은 추세 전환 또는 가속의 신호.`;
+      } else if (ratio >= 2) {
+        hot = true;
+        status = `🔥 활발 ${rvolPct}%`; tone = "good";
+        explain = `평소(${fmtVolume(avgV)})의 ${rvolPct}%. 와이코프식 큰손 진입 가능성.`;
       } else if (ratio >= 1.5) {
-        status = `📈 활발 (${ratio.toFixed(1)}배)`; tone = "good";
-        explain = `평소(${fmtVolume(avgV)})보다 활발. 가격 움직임에 신뢰도가 더해져요.`;
+        status = `📈 활발 ${rvolPct}%`; tone = "good";
+        explain = `평소(${fmtVolume(avgV)})보다 활발 (${rvolPct}%). 가격 움직임에 신뢰도가 더해져요.`;
       } else if (ratio < 0.5) {
-        status = `😴 한산 (${ratio.toFixed(1)}배)`; tone = "warn";
-        explain = `평소(${fmtVolume(avgV)})의 절반 미만. 거래 참여자가 적어요.`;
+        status = `😴 한산 ${rvolPct}%`; tone = "warn";
+        explain = `평소(${fmtVolume(avgV)})의 ${rvolPct}%. 거래 참여자가 적어요.`;
       } else {
-        status = `평소 수준`; tone = "good";
+        status = `평소 수준 ${rvolPct}%`; tone = "good";
         explain = `평소(${fmtVolume(avgV)})와 비슷. 일상적 거래 흐름.`;
       }
       return {
         emoji: "📊", label: "오늘 거래량",
         value: fmtVolume(lastV),
-        status, tone, explain
+        rvol: hot ? `${ratio.toFixed(1)}x` : null,
+        status, tone, explain, hot
       };
     })(),
     {
@@ -1958,12 +2027,12 @@ function renderVerdict(v) {
 
 function renderVitals(items) {
   $("vitals").innerHTML = items.map(v => `
-    <div class="vital">
+    <div class="vital${v.hot ? ' hot' : ''}">
       <span class="strip ${v.tone}"></span>
       ${v.lesson ? `<a class="vital-help" href="learn.html#${v.lesson}" target="_blank" rel="noopener" title="이게 뭔지 배우기">?</a>` : ''}
       <span class="emoji-big">${v.emoji}</span>
       <div class="label-tiny">${v.label}</div>
-      <div class="value-big">${v.value}${v.sub ? `<span class="value-sub">${v.sub}</span>` : ''}</div>
+      <div class="value-big">${v.value}${v.rvol ? `<span class="rvol-big">${v.rvol}</span>` : ''}${v.sub ? `<span class="value-sub">${v.sub}</span>` : ''}</div>
       <div class="status-line ${v.tone}">${v.status}</div>
       <div class="explain">${v.explain}</div>
     </div>
