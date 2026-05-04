@@ -637,12 +637,12 @@
   .hover-tip {
     position: absolute; background: var(--ink); color: var(--bg);
     padding: 10px 14px; font-family: 'JetBrains Mono', monospace;
-    font-size: 12px; border-radius: 8px; pointer-events: none;
+    font-size: 12px; line-height: 1.5; border-radius: 8px; pointer-events: none;
     opacity: 0; transition: opacity 0.15s ease; white-space: nowrap;
     z-index: 10; box-shadow: 3px 3px 0 var(--bg-deep);
   }
   .hover-tip.live { opacity: 1; }
-  .hover-tip b { color: var(--bg-deep); font-size: 13px; }
+  .hover-tip b { color: var(--bg-deep); font-size: 14px; }
 
   .vitals-title {
     font-family: 'Bricolage Grotesque', sans-serif; font-weight: 800;
@@ -947,7 +947,7 @@
           <span class="legend-item" data-feature="downtrend" style="color: var(--bad);" title="클릭해서 켜기/끄기"><span class="legend-swatch diag down"></span>↘ 하락추세</span>
           <span class="legend-item" data-feature="annotations" title="주석 텍스트 켜기/끄기">✏️ 주석</span>
           <span class="legend-item" data-feature="volume" title="거래대금/거래량 패널 켜기/끄기">📊 거래량</span>
-          <span class="legend-item" data-action="vol-mode" title="대금 ↔ 수 전환">💱 모드: <b id="vol-mode-label">대금</b></span>
+          <span class="legend-item" data-action="vol-mode" title="거래대금 ↔ 거래량 전환">💱 모드: <b id="vol-mode-label">거래대금</b></span>
         </div>
       </div>
       <div class="chart-wrap">
@@ -1778,6 +1778,7 @@ function drawChart(bars, ma50Vis, ma200Vis, levels, trendLines, currentPrice, ra
   chartHoverCtx.bars = bars;
   chartHoverCtx.hoverWidth = hoverWidth;
   chartHoverCtx.xOf = xOf;
+  chartHoverCtx.currency = state.data ? state.data.currency : 'USD';
 }
 
 /* ==================== 평결/처방/바이탈 ==================== */
@@ -2112,7 +2113,7 @@ function syncLegendToggles() {
   });
   // 거래량 모드 라벨
   const modeLabel = document.getElementById('vol-mode-label');
-  if (modeLabel) modeLabel.textContent = chartFeatures.volumeMode === 'value' ? '대금' : '수';
+  if (modeLabel) modeLabel.textContent = chartFeatures.volumeMode === 'value' ? '거래대금' : '거래량';
 }
 
 function setupLegendToggles() {
@@ -2132,7 +2133,7 @@ function setupLegendToggles() {
       chartFeatures.volumeMode = chartFeatures.volumeMode === 'value' ? 'count' : 'value';
       saveFeatures(chartFeatures);
       const label = document.getElementById('vol-mode-label');
-      if (label) label.textContent = chartFeatures.volumeMode === 'value' ? '대금' : '수';
+      if (label) label.textContent = chartFeatures.volumeMode === 'value' ? '거래대금' : '거래량';
       if (state.data) applyRange(state.rangeMonths);
     });
   });
@@ -2167,9 +2168,14 @@ function setupChartInteractions() {
     line.setAttribute('x2', xPos);
     line.setAttribute('opacity', 0.5);
     const ds = `${b.t.getFullYear()}.${String(b.t.getMonth() + 1).padStart(2, '0')}.${String(b.t.getDate()).padStart(2, '0')}`;
-    tip.innerHTML = `${ds}<br/><b>${fmtPrice(b.c, '')}</b>`;
+    // 거래대금 = 종가 × 거래량
+    const turnover = (b.c || 0) * (b.v || 0);
+    const turnLine = turnover > 0
+      ? `<br/><span style="color:#8a91a3;font-size:10px">💰 ${fmtMoney(turnover, ctx.currency)}</span>`
+      : '';
+    tip.innerHTML = `${ds}<br/><b>${fmtPrice(b.c, '')}</b>${turnLine}`;
     tip.style.left = `${(e.clientX - rect.left) + 14}px`;
-    tip.style.top = `${(e.clientY - rect.top) - 50}px`;
+    tip.style.top = `${(e.clientY - rect.top) - 70}px`;
     tip.classList.add('live');
   });
 
