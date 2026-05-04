@@ -1901,69 +1901,96 @@ function buildVitals({ ma50Last, ma200Last, rsiLast, currentPrice, fullCloses, b
         : "체온 정상. 과열도 침체도 아닌 평온 상태. 다른 신호와 같이 보세요."
     },
     (() => {
-      // 거래대금: 종가 × 거래량 (헤지펀드용 유동성 지표)
-      const turns = (bars || []).map(b => (b.c || 0) * (b.v || 0)).filter(t => t > 0);
-      const lastT = turns[turns.length - 1] || 0;
-      const window = turns.slice(-21, -1);
-      const avgT = window.length > 0 ? window.reduce((a, b) => a + b, 0) / window.length : lastT;
-      const ratio = avgT > 0 ? lastT / avgT : 1;
+      // 거래대금: 종가 × 거래량
+      const allBars = bars || [];
+      const turns = allBars.map(b => (b.c || 0) * (b.v || 0));
+      // 최근 60일 평균
+      const validTurns = turns.filter(t => t > 0);
+      const recentWindow = validTurns.slice(-61, -1);
+      const avgT = recentWindow.length > 0 ? recentWindow.reduce((a, b) => a + b, 0) / recentWindow.length : 0;
+      // 장중 감지: 마지막 봉이 평균의 50% 미만이고 날짜가 최근 1일 이내
+      const lastBar = allBars[allBars.length - 1];
+      const lastT = lastBar ? (lastBar.c || 0) * (lastBar.v || 0) : 0;
+      const today = new Date();
+      const lastDate = lastBar ? lastBar.t : today;
+      const daysAgo = (today - lastDate) / (1000 * 60 * 60 * 24);
+      const isIntraday = lastT > 0 && avgT > 0 && lastT < avgT * 0.5 && daysAgo < 1.5;
+      // 장중이면 직전 완료된 거래일 사용
+      const useT = isIntraday && allBars.length >= 2 ? (allBars[allBars.length - 2].c || 0) * (allBars[allBars.length - 2].v || 0) : lastT;
+      const labelPrefix = isIntraday ? "직전" : "오늘";
+      const ratio = avgT > 0 ? useT / avgT : 1;
       const rvolPct = (ratio * 100).toFixed(0);
       let status, tone, explain, hot = false;
       if (ratio >= 2.5) {
         hot = true;
         status = `🔥 폭증 ${rvolPct}%`; tone = "warn";
-        explain = `평균(${fmtMoney(avgT, currency)})의 ${rvolPct}%! 대장주 후보. 큰손이 움직이는 신호. 가격 방향이 진짜인지 확인하세요.`;
+        explain = `60일 평균(${fmtMoney(avgT, currency)})의 ${rvolPct}%! 대장주 후보. 큰손이 움직이는 신호.`;
       } else if (ratio >= 2) {
         hot = true;
         status = `🔥 활발 ${rvolPct}%`; tone = "good";
-        explain = `평균(${fmtMoney(avgT, currency)})의 ${rvolPct}%. 시장 주도주의 모습. 추세 신뢰도 높음.`;
+        explain = `60일 평균(${fmtMoney(avgT, currency)})의 ${rvolPct}%. 시장 주도주의 모습.`;
       } else if (ratio >= 1.5) {
         status = `📈 활발 ${rvolPct}%`; tone = "good";
-        explain = `평균(${fmtMoney(avgT, currency)})보다 활발해요 (${rvolPct}%). 추세에 힘이 실리고 있어요.`;
+        explain = `60일 평균(${fmtMoney(avgT, currency)})보다 활발 (${rvolPct}%). 추세에 힘이 실려요.`;
       } else if (ratio < 0.5) {
         status = `😴 한산 ${rvolPct}%`; tone = "warn";
-        explain = `평균(${fmtMoney(avgT, currency)})의 ${rvolPct}%. 시장 관심 식음 또는 폭발 전 고요.`;
+        explain = `60일 평균(${fmtMoney(avgT, currency)})의 ${rvolPct}%. 시장 관심 식음 또는 폭발 전 고요.`;
       } else {
         status = `평소 수준 ${rvolPct}%`; tone = "good";
-        explain = `평균(${fmtMoney(avgT, currency)})과 비슷한 흐름.`;
+        explain = `60일 평균(${fmtMoney(avgT, currency)})과 비슷한 흐름.`;
+      }
+      if (isIntraday) {
+        explain = `📡 오늘은 장중이라 직전 완료 거래일 기준이에요. ${explain}`;
       }
       return {
-        emoji: "💰", label: "오늘 거래대금",
-        value: fmtMoney(lastT, currency),
+        emoji: "💰", label: `${labelPrefix} 거래대금`,
+        value: fmtMoney(useT, currency),
         rvol: hot ? `${ratio.toFixed(1)}x` : null,
         status, tone, explain, hot
       };
     })(),
     (() => {
-      // 거래량: 주식 수 (와이코프 큰손 추적용)
-      const vols = (bars || []).map(b => b.v || 0).filter(v => v > 0);
-      const lastV = vols[vols.length - 1] || 0;
-      const window = vols.slice(-21, -1);
-      const avgV = window.length > 0 ? window.reduce((a, b) => a + b, 0) / window.length : lastV;
-      const ratio = avgV > 0 ? lastV / avgV : 1;
+      // 거래량 (주식 수)
+      const allBars = bars || [];
+      const vols = allBars.map(b => b.v || 0);
+      const validVols = vols.filter(v => v > 0);
+      const recentWindow = validVols.slice(-61, -1);
+      const avgV = recentWindow.length > 0 ? recentWindow.reduce((a, b) => a + b, 0) / recentWindow.length : 0;
+      const lastBar = allBars[allBars.length - 1];
+      const lastV = lastBar ? (lastBar.v || 0) : 0;
+      const today = new Date();
+      const lastDate = lastBar ? lastBar.t : today;
+      const daysAgo = (today - lastDate) / (1000 * 60 * 60 * 24);
+      const isIntraday = lastV > 0 && avgV > 0 && lastV < avgV * 0.5 && daysAgo < 1.5;
+      const useV = isIntraday && allBars.length >= 2 ? (allBars[allBars.length - 2].v || 0) : lastV;
+      const labelPrefix = isIntraday ? "직전" : "오늘";
+      const ratio = avgV > 0 ? useV / avgV : 1;
       const rvolPct = (ratio * 100).toFixed(0);
       let status, tone, explain, hot = false;
       if (ratio >= 2.5) {
         hot = true;
         status = `🔥 폭증 ${rvolPct}%`; tone = "warn";
-        explain = `평소(${fmtVolume(avgV)})의 ${rvolPct}%. 거래량 폭증은 추세 전환 또는 가속의 신호.`;
+        explain = `60일 평균(${fmtVolume(avgV)})의 ${rvolPct}%. 거래량 폭증은 추세 전환 또는 가속의 신호.`;
       } else if (ratio >= 2) {
         hot = true;
         status = `🔥 활발 ${rvolPct}%`; tone = "good";
-        explain = `평소(${fmtVolume(avgV)})의 ${rvolPct}%. 와이코프식 큰손 진입 가능성.`;
+        explain = `60일 평균(${fmtVolume(avgV)})의 ${rvolPct}%. 와이코프식 큰손 진입 가능성.`;
       } else if (ratio >= 1.5) {
         status = `📈 활발 ${rvolPct}%`; tone = "good";
-        explain = `평소(${fmtVolume(avgV)})보다 활발 (${rvolPct}%). 가격 움직임에 신뢰도가 더해져요.`;
+        explain = `60일 평균(${fmtVolume(avgV)})보다 활발 (${rvolPct}%). 가격 움직임 신뢰도 ↑`;
       } else if (ratio < 0.5) {
         status = `😴 한산 ${rvolPct}%`; tone = "warn";
-        explain = `평소(${fmtVolume(avgV)})의 ${rvolPct}%. 거래 참여자가 적어요.`;
+        explain = `60일 평균(${fmtVolume(avgV)})의 ${rvolPct}%. 거래 참여자가 적어요.`;
       } else {
         status = `평소 수준 ${rvolPct}%`; tone = "good";
-        explain = `평소(${fmtVolume(avgV)})와 비슷. 일상적 거래 흐름.`;
+        explain = `60일 평균(${fmtVolume(avgV)})과 비슷. 일상적 거래 흐름.`;
+      }
+      if (isIntraday) {
+        explain = `📡 오늘은 장중이라 직전 완료 거래일 기준이에요. ${explain}`;
       }
       return {
-        emoji: "📊", label: "오늘 거래량",
-        value: fmtVolume(lastV),
+        emoji: "📊", label: `${labelPrefix} 거래량`,
+        value: fmtVolume(useV),
         rvol: hot ? `${ratio.toFixed(1)}x` : null,
         status, tone, explain, hot
       };
