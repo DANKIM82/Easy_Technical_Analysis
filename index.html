@@ -675,6 +675,11 @@
     font-family: 'Bricolage Grotesque', sans-serif; font-weight: 800;
     font-size: 32px; letter-spacing: -0.02em; line-height: 1; margin-bottom: 4px;
   }
+  .vital .value-sub {
+    font-family: 'JetBrains Mono', monospace; font-weight: 500;
+    font-size: 12px; color: var(--ink-faded); margin-left: 8px;
+    letter-spacing: 0;
+  }
   .vital .status-line {
     font-family: 'Caveat', cursive; font-weight: 700;
     font-size: 22px; margin-bottom: 12px;
@@ -905,7 +910,8 @@
           <span class="legend-item" data-feature="uptrend" style="color: var(--good);" title="클릭해서 켜기/끄기"><span class="legend-swatch diag"></span>↗ 상승추세</span>
           <span class="legend-item" data-feature="downtrend" style="color: var(--bad);" title="클릭해서 켜기/끄기"><span class="legend-swatch diag down"></span>↘ 하락추세</span>
           <span class="legend-item" data-feature="annotations" title="주석 텍스트 켜기/끄기">✏️ 주석</span>
-          <span class="legend-item" data-feature="volume" title="거래량 켜기/끄기">📊 거래량</span>
+          <span class="legend-item" data-feature="volume" title="거래대금/거래량 패널 켜기/끄기">📊 거래량</span>
+          <span class="legend-item" data-action="vol-mode" title="대금 ↔ 수 전환">💱 모드: <b id="vol-mode-label">대금</b></span>
         </div>
       </div>
       <div class="chart-wrap">
@@ -1422,6 +1428,29 @@ function fmtPct(n) {
   if (n == null || isNaN(n)) return "—";
   return `${n >= 0 ? "+" : ""}${n.toFixed(2)}%`;
 }
+function fmtMoney(value, currency) {
+  // 거래대금 포맷팅 (통화별 단위)
+  if (value == null || isNaN(value) || value <= 0) return "—";
+  if (currency === "KRW") {
+    if (value >= 1e12) return (value / 1e12).toFixed(2) + "조원";
+    if (value >= 1e8) return (value / 1e8).toFixed(0) + "억원";
+    if (value >= 1e4) return (value / 1e4).toFixed(0) + "만원";
+    return Math.round(value).toLocaleString() + "원";
+  }
+  // USD/JPY 등
+  const sym = currency === "USD" ? "$" : currency === "JPY" ? "¥" : "$";
+  if (value >= 1e9) return sym + (value / 1e9).toFixed(2) + "B";
+  if (value >= 1e6) return sym + (value / 1e6).toFixed(0) + "M";
+  if (value >= 1e3) return sym + (value / 1e3).toFixed(0) + "K";
+  return sym + Math.round(value).toLocaleString();
+}
+function fmtVolume(v) {
+  // 주식 수 (보조 정보)
+  if (v == null || isNaN(v) || v <= 0) return "—";
+  if (v >= 1e8) return (v / 1e8).toFixed(1) + "억주";
+  if (v >= 1e4) return (v / 1e4).toFixed(0) + "만주";
+  return Math.round(v).toLocaleString() + "주";
+}
 
 /* ==================== 차트 ==================== */
 function drawChart(bars, ma50Vis, ma200Vis, levels, trendLines, currentPrice, rangeMonths) {
@@ -1540,47 +1569,42 @@ function drawChart(bars, ma50Vis, ma200Vis, levels, trendLines, currentPrice, ra
   const closeLine = bars.map((b, i) => `${xOf(i)},${yOf(b.c)}`).join(" ");
   s += `<polyline points="${closeLine}" fill="none" stroke="#1d2230" stroke-width="2.4" stroke-linejoin="round"/>`;
 
-  // 거래량 패널
+  // 거래량 패널 (모드: 거래대금 vs 거래량 수)
   if (chartFeatures.volume) {
-    const vols = bars.map(b => b.v || 0);
-    const maxV = Math.max(...vols, 1);
-    // 최근 20일 평균 (거래량 대비 강도 표시)
+    const isValue = chartFeatures.volumeMode === 'value';
+    // 거래대금 = 종가 × 거래량 / 거래량 = 주식 수
+    const series = bars.map(b => isValue ? (b.c || 0) * (b.v || 0) : (b.v || 0));
+    const maxS = Math.max(...series, 1);
     const avgWindow = 20;
-    // 패널 배경 박스 (살짝)
     s += `<line x1="${padL}" x2="${W - padR}" y1="${volTop}" y2="${volTop}" stroke="rgba(29,34,48,0.08)"/>`;
-    // 거래량 바
     const barW = Math.max(1, (cw / bars.length) * 0.72);
     bars.forEach((b, i) => {
-      const v = b.v || 0;
-      if (v <= 0) return;
-      const h = (v / maxV) * (volH - 4);
+      const t = series[i];
+      if (t <= 0) return;
+      const h = (t / maxS) * (volH - 4);
       const x = xOf(i) - barW / 2;
       const y = volBot - h;
-      // 평균 대비 강도
       const winStart = Math.max(0, i - avgWindow);
-      const winSlice = vols.slice(winStart, i);
-      const avgV = winSlice.length > 0 ? winSlice.reduce((s, x) => s + x, 0) / winSlice.length : v;
-      const ratio = v / Math.max(avgV, 1);
-      // 가격 방향 + 거래량 강도로 색상 결정
+      const winSlice = series.slice(winStart, i);
+      const avgT = winSlice.length > 0 ? winSlice.reduce((s, x) => s + x, 0) / winSlice.length : t;
+      const ratio = t / Math.max(avgT, 1);
       const priceUp = i > 0 ? b.c >= bars[i - 1].c : true;
       let color, opacity;
       if (ratio >= 2) {
-        // 평균 2배 이상 = 진한 색
         color = priceUp ? '#2d8659' : '#d94626';
         opacity = 0.85;
       } else if (ratio >= 1.3) {
-        // 평균 1.3배 이상 = 중간
         color = priceUp ? '#2d8659' : '#d94626';
         opacity = 0.55;
       } else {
-        // 평소 = 회색
         color = '#8a91a3';
         opacity = 0.45;
       }
       s += `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${barW.toFixed(1)}" height="${h.toFixed(1)}" fill="${color}" opacity="${opacity}"/>`;
     });
-    // VOL 라벨 (좌측 상단)
-    s += `<text x="${padL + 4}" y="${(volTop + 13).toFixed(1)}" font-size="9" fill="#8a91a3" font-weight="700" letter-spacing="0.05em">VOL</text>`;
+    // 라벨
+    const panelLabel = isValue ? '거래대금' : '거래량';
+    s += `<text x="${padL + 4}" y="${(volTop + 13).toFixed(1)}" font-size="9" fill="#8a91a3" font-weight="700" letter-spacing="0.05em">${panelLabel}</text>`;
   }
 
   // 대각선 추세선 (Dynamic Levels) — 미래까지 연장
@@ -1776,7 +1800,7 @@ function buildActions({ levels, currentPrice, ma50Last, ma200Last, currency }) {
   return actions;
 }
 
-function buildVitals({ ma50Last, ma200Last, rsiLast, currentPrice, fullCloses, bars }) {
+function buildVitals({ ma50Last, ma200Last, rsiLast, currentPrice, fullCloses, bars, currency }) {
   const above50 = currentPrice > ma50Last;
   const above200 = currentPrice > ma200Last;
   const golden = ma50Last > ma200Last;
@@ -1821,30 +1845,56 @@ function buildVitals({ ma50Last, ma200Last, rsiLast, currentPrice, fullCloses, b
         : "체온 정상. 과열도 침체도 아닌 평온 상태. 다른 신호와 같이 보세요."
     },
     (() => {
-      // 거래량: 오늘 vs 최근 20일 평균
+      // 거래대금: 종가 × 거래량 (헤지펀드용 유동성 지표)
+      const turns = (bars || []).map(b => (b.c || 0) * (b.v || 0)).filter(t => t > 0);
+      const lastT = turns[turns.length - 1] || 0;
+      const window = turns.slice(-21, -1);
+      const avgT = window.length > 0 ? window.reduce((a, b) => a + b, 0) / window.length : lastT;
+      const ratio = avgT > 0 ? lastT / avgT : 1;
+      let status, tone, explain;
+      if (ratio >= 2.5) {
+        status = `🔥 폭증 (${ratio.toFixed(1)}배)`; tone = "warn";
+        explain = `평균(${fmtMoney(avgT, currency)})의 2.5배 이상 폭증! 큰손이 움직이는 신호. 가격 방향이 진짜인지 확인하세요.`;
+      } else if (ratio >= 1.5) {
+        status = `📈 활발 (${ratio.toFixed(1)}배)`; tone = "good";
+        explain = `평균(${fmtMoney(avgT, currency)})보다 활발해요. 추세에 힘이 실리고 있어요.`;
+      } else if (ratio < 0.5) {
+        status = `😴 한산 (${ratio.toFixed(1)}배)`; tone = "warn";
+        explain = `평균(${fmtMoney(avgT, currency)})의 절반도 안 돼요. 시장 관심 식음 또는 폭발 전 고요.`;
+      } else {
+        status = `평소 수준`; tone = "good";
+        explain = `평균(${fmtMoney(avgT, currency)})과 비슷한 흐름.`;
+      }
+      return {
+        emoji: "💰", label: "오늘 거래대금",
+        value: fmtMoney(lastT, currency),
+        status, tone, explain
+      };
+    })(),
+    (() => {
+      // 거래량: 주식 수 (와이코프 큰손 추적용)
       const vols = (bars || []).map(b => b.v || 0).filter(v => v > 0);
       const lastV = vols[vols.length - 1] || 0;
       const window = vols.slice(-21, -1);
       const avgV = window.length > 0 ? window.reduce((a, b) => a + b, 0) / window.length : lastV;
       const ratio = avgV > 0 ? lastV / avgV : 1;
-      const fmt = (v) => v >= 1e8 ? (v / 1e8).toFixed(1) + '억' : v >= 1e4 ? (v / 1e4).toFixed(0) + '만' : Math.round(v).toLocaleString();
       let status, tone, explain;
       if (ratio >= 2.5) {
         status = `🔥 폭증 (${ratio.toFixed(1)}배)`; tone = "warn";
-        explain = "거래량이 평소의 2.5배 이상 폭증! 큰손이 움직이는 신호. 가격 방향이 진짜인지 확인해보세요.";
+        explain = `평소(${fmtVolume(avgV)})의 2.5배 이상. 거래량 폭증은 추세 전환의 신호일 수도.`;
       } else if (ratio >= 1.5) {
         status = `📈 활발 (${ratio.toFixed(1)}배)`; tone = "good";
-        explain = "거래량이 평소보다 활발해요. 추세에 힘이 실리고 있다는 신호.";
+        explain = `평소(${fmtVolume(avgV)})보다 활발. 가격 움직임에 신뢰도가 더해져요.`;
       } else if (ratio < 0.5) {
         status = `😴 한산 (${ratio.toFixed(1)}배)`; tone = "warn";
-        explain = "거래량이 평소의 절반도 안 돼요. 시장 관심이 식었거나 폭발 전 고요함.";
+        explain = `평소(${fmtVolume(avgV)})의 절반 미만. 거래 참여자가 적어요.`;
       } else {
         status = `평소 수준`; tone = "good";
-        explain = "거래량이 평소와 비슷해요. 추세든 박스권이든 자연스러운 흐름.";
+        explain = `평소(${fmtVolume(avgV)})와 비슷. 일상적 거래 흐름.`;
       }
       return {
         emoji: "📊", label: "오늘 거래량",
-        value: fmt(lastV),
+        value: fmtVolume(lastV),
         status, tone, explain
       };
     })(),
@@ -1913,7 +1963,7 @@ function renderVitals(items) {
       ${v.lesson ? `<a class="vital-help" href="learn.html#${v.lesson}" target="_blank" rel="noopener" title="이게 뭔지 배우기">?</a>` : ''}
       <span class="emoji-big">${v.emoji}</span>
       <div class="label-tiny">${v.label}</div>
-      <div class="value-big">${v.value}</div>
+      <div class="value-big">${v.value}${v.sub ? `<span class="value-sub">${v.sub}</span>` : ''}</div>
       <div class="status-line ${v.tone}">${v.status}</div>
       <div class="explain">${v.explain}</div>
     </div>
@@ -1973,6 +2023,7 @@ const defaultFeatures = {
   downtrend: true,
   annotations: true,
   volume: true,
+  volumeMode: 'value',  // 'value' = 거래대금, 'count' = 거래량
 };
 function loadFeatures() {
   try {
@@ -1990,6 +2041,9 @@ function syncLegendToggles() {
     const f = el.dataset.feature;
     el.classList.toggle('off', !chartFeatures[f]);
   });
+  // 거래량 모드 라벨
+  const modeLabel = document.getElementById('vol-mode-label');
+  if (modeLabel) modeLabel.textContent = chartFeatures.volumeMode === 'value' ? '대금' : '수';
 }
 
 function setupLegendToggles() {
@@ -2000,6 +2054,16 @@ function setupLegendToggles() {
       saveFeatures(chartFeatures);
       el.classList.toggle('off', !chartFeatures[f]);
       // 차트 다시 그리기
+      if (state.data) applyRange(state.rangeMonths);
+    });
+  });
+  // 거래대금/거래량 모드 전환
+  document.querySelectorAll('.legend-item[data-action="vol-mode"]').forEach(el => {
+    el.addEventListener('click', () => {
+      chartFeatures.volumeMode = chartFeatures.volumeMode === 'value' ? 'count' : 'value';
+      saveFeatures(chartFeatures);
+      const label = document.getElementById('vol-mode-label');
+      if (label) label.textContent = chartFeatures.volumeMode === 'value' ? '대금' : '수';
       if (state.data) applyRange(state.rangeMonths);
     });
   });
@@ -2131,7 +2195,7 @@ function applyRange(rangeMonths) {
 
   drawChart(visibleBars, visibleMa50, visibleMa200, levels, trendLines, currentPrice, rangeMonths);
   renderVerdict(buildVerdict({ ma50Last, ma200Last, rsiLast, currentPrice }));
-  renderVitals(buildVitals({ ma50Last, ma200Last, rsiLast, currentPrice, fullCloses: state.fullCloses, bars: state.data.bars }));
+  renderVitals(buildVitals({ ma50Last, ma200Last, rsiLast, currentPrice, fullCloses: state.fullCloses, bars: state.data.bars, currency: state.data.currency }));
   renderLevels(levels, currentPrice, state.data.currency);
   renderActions(buildActions({ levels, currentPrice, ma50Last, ma200Last, currency: state.data.currency }));
 
